@@ -24,6 +24,7 @@ import Login from "@/pages/Login";
 import Register from "@/pages/Register";
 import ForgotPassword from "@/pages/ForgotPassword";
 import AttenteValidation from "@/pages/AttenteValidation";
+import ResetPassword from "@/pages/ResetPassword";
 
 // Protected pages
 import StudentDashboard from "@/pages/StudentDashboard";
@@ -36,6 +37,7 @@ const CLEAN_ROUTES = [
   "/login",
   "/register",
   "/forgot-password",
+  "/reset-password",
   "/attente-validation",
   "/etudiant/dashboard",
   "/cours/",
@@ -71,7 +73,7 @@ function AppContent() {
           <Route path="/register" element={<Register />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/attente-validation" element={<AttenteValidation />} />
-
+          <Route path="/reset-password" element={<ResetPassword />} />
           {/* ── Student (any validated user) ── */}
           <Route
             path="/etudiant/dashboard"
