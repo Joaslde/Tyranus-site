@@ -230,11 +230,12 @@ const StudentDashboard = () => {
                   Aucun cours disponible pour votre classe pour l'instant.
                 </div>
               ) : (
-                <div className="space-y-3">
+                <div className="space-y-4">
                   {cours.map((c, i) => (
                     <Link key={c.id} to={`/cours/${c.id}`}>
+                      <br />
                       <div
-                        className={`bg-white rounded-xl p-4 shadow flex items-center gap-4 transition-all hover:shadow-md border-l-4 ${
+                        className={`bg-white rounded-xl p-5 shadow flex items-center gap-4 transition-all hover:shadow-md border-l-4 ${
                           progression[c.id]
                             ? "border-green-400"
                             : "border-gray-200"
@@ -270,40 +271,13 @@ const StudentDashboard = () => {
                 </div>
               )}
 
-              {/* All done — demande passage */}
-              {totalCount > 0 &&
-                completedCount === totalCount &&
-                !demandePending && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="mt-6 bg-gradient-to-r from-[#1A237E] to-blue-700 text-white rounded-xl p-6 text-center shadow-lg"
-                  >
-                    <Trophy className="w-12 h-12 text-[#D4AF37] mx-auto mb-3" />
-                    <h3 className="text-xl font-serif font-bold mb-2">
-                      🎉 Félicitations !
-                    </h3>
-                    <p className="text-white/80 text-sm mb-4">
-                      Vous avez terminé tous les cours de cette classe.
-                      Souhaitez-vous passer à la classe suivante ?
-                    </p>
-                    <Button
-                      onClick={handleDemanderPassage}
-                      disabled={loadingAction}
-                      className="bg-[#D4AF37] text-[#1A237E] font-bold hover:bg-[#D4AF37]/90"
-                    >
-                      {loadingAction
-                        ? "Envoi..."
-                        : "Passer à la classe suivante →"}
-                    </Button>
-                  </motion.div>
-                )}
-
-              {demandePending && (
-                <div className="mt-4 flex items-center gap-2 text-amber-600 text-sm bg-amber-50 rounded-lg p-4">
-                  <Clock className="w-4 h-4" />
-                  Votre demande de passage est en attente de validation par
-                  l'administration.
+              {/* À jour sur tous les cours */}
+              {totalCount > 0 && completedCount === totalCount && (
+                <div className="mt-4 flex items-center gap-3 bg-green-50 border border-green-200 text-green-700 rounded-xl p-4">
+                  <CheckCircle className="w-5 h-5 flex-shrink-0" />
+                  <p className="text-sm font-medium">
+                    Vous êtes à jour sur tous les cours disponibles. De nouveaux cours seront ajoutés prochainement.
+                  </p>
                 </div>
               )}
             </section>

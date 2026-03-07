@@ -9,6 +9,8 @@ import {
   Check,
   X,
   Eye,
+  Layers,
+  GraduationCap,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
@@ -33,19 +35,31 @@ const ProfDashboard = () => {
 
   useEffect(() => {
     if (!user) return;
-    // Fetch assigned classes
-    supabase
-      .from("prof_classes")
-      .select("classe:classe_id(id, nom, cycle:cycle_id(nom))")
-      .eq("prof_id", user.id)
-      .then(({ data }) => {
-        const cls = (data || []).map((d) => d.classe);
-        setMesClasses(cls);
-        if (cls.length > 0) {
-          setSelectedClasse(cls[0].id);
-          setForm((f) => ({ ...f, classe_id: cls[0].id }));
-        }
-      });
+    // Fetch classes assignées au prof (non-modulaires) + toutes les classes modulaires
+    Promise.all([
+      supabase
+        .from("prof_classes")
+        .select("classe:classe_id(id, nom, ordre, est_modulaire, cycle:cycle_id(id, nom))")
+        .eq("prof_id", user.id),
+      supabase
+        .from("classes")
+        .select("id, nom, ordre, est_modulaire, cycle:cycle_id(id, nom)")
+        .eq("est_modulaire", true)
+        .order("ordre"),
+    ]).then(([{ data: assigned }, { data: modulaires }]) => {
+      const classesAssignees = (assigned || []).map((d) => d.classe).filter(Boolean);
+      const classesModulaires = modulaires || [];
+      // Fusion sans doublons
+      const all = [...classesAssignees, ...classesModulaires.filter(
+        (m) => !classesAssignees.find((a) => a.id === m.id)
+      )];
+      setMesClasses(all);
+      const first = all.find((c) => !c.est_modulaire) || all[0];
+      if (first) {
+        setSelectedClasse(first.id);
+        setForm((f) => ({ ...f, classe_id: first.id }));
+      }
+    });
   }, [user]);
 
   useEffect(() => {
@@ -139,25 +153,84 @@ const ProfDashboard = () => {
         </div>
 
         <div className="max-w-5xl mx-auto px-4 mt-6">
-          {/* Class selector */}
-          <div className="bg-white rounded-xl shadow p-4 mb-6 flex items-center gap-4">
-            <label className="text-sm font-medium text-gray-700 whitespace-nowrap">
-              Classe :
-            </label>
-            <select
-              value={selectedClasse}
-              onChange={(e) => {
-                setSelectedClasse(e.target.value);
-                setForm((f) => ({ ...f, classe_id: e.target.value }));
-              }}
-              className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#1A237E] outline-none flex-1"
-            >
-              {mesClasses.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.nom} ({c.cycle?.nom})
-                </option>
-              ))}
-            </select>
+          {/* Sélecteur double : Classe régulière | Module */}
+          <div className="bg-white rounded-xl shadow p-5 mb-6">
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-4">
+              Sélectionner une classe ou un module
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+
+              {/* Dropdown Classes régulières */}
+              <div className="space-y-1.5">
+                <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                  <GraduationCap className="w-4 h-4 text-[#1A237E]" />
+                  Classe
+                </label>
+                <select
+                  value={!mesClasses.find((c) => c.id === selectedClasse)?.est_modulaire ? selectedClasse : ""}
+                  onChange={(e) => {
+                    if (!e.target.value) return;
+                    setSelectedClasse(e.target.value);
+                    setForm((f) => ({ ...f, classe_id: e.target.value }));
+                  }}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-[#1A237E] outline-none bg-white"
+                >
+                  <option value="">— Choisir une classe —</option>
+                  {mesClasses
+                    .filter((c) => !c.est_modulaire)
+                    .map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.nom} — {c.cycle?.nom}
+                      </option>
+                    ))}
+                </select>
+              </div>
+
+              {/* Dropdown Modules */}
+              <div className="space-y-1.5">
+                <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                  <Layers className="w-4 h-4 text-[#1A237E]" />
+                  Formation modulaire
+                </label>
+                <select
+                  value={mesClasses.find((c) => c.id === selectedClasse)?.est_modulaire ? selectedClasse : ""}
+                  onChange={(e) => {
+                    if (!e.target.value) return;
+                    setSelectedClasse(e.target.value);
+                    setForm((f) => ({ ...f, classe_id: e.target.value }));
+                  }}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-[#1A237E] outline-none bg-white"
+                >
+                  <option value="">— Choisir un module —</option>
+                  {mesClasses
+                    .filter((c) => c.est_modulaire)
+                    .map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.nom}
+                      </option>
+                    ))}
+                </select>
+              </div>
+
+            </div>
+
+            {/* Indication de la sélection active */}
+            {selectedClasse && (
+              <div className="mt-3 flex items-center gap-2 text-xs text-[#1A237E] bg-blue-50 rounded-lg px-3 py-2">
+                {mesClasses.find((c) => c.id === selectedClasse)?.est_modulaire
+                  ? <Layers className="w-3.5 h-3.5" />
+                  : <GraduationCap className="w-3.5 h-3.5" />
+                }
+                <span>
+                  Sélection active :&nbsp;
+                  <strong>
+                    {mesClasses.find((c) => c.id === selectedClasse)?.nom}
+                  </strong>
+                  &nbsp;—&nbsp;
+                  {mesClasses.find((c) => c.id === selectedClasse)?.cycle?.nom}
+                </span>
+              </div>
+            )}
           </div>
 
           {/* Tabs */}

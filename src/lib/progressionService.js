@@ -40,22 +40,9 @@ export async function completeCours(userId, coursId, classeId) {
     totalCours && completedCours && completedCours.length >= totalCours.length;
 
   if (allDone) {
-    // 3. Insert diploma (archive)
-    await supabase
-      .from("diplomes")
-      .upsert({
-        user_id: userId,
-        classe_id: classeId,
-        completed_at: new Date().toISOString(),
-      });
-
-    // 4. Set classe_id to NULL → student becomes "libre"
-    await supabase
-      .from("profiles")
-      .update({ classe_id: null })
-      .eq("id", userId);
-
-    return { classeTerminee: true };
+    // Tous les cours actuels sont terminés — aucune action automatique.
+    // Le passage de classe sera déclenché manuellement par l'admin (fin d'année).
+    return { classeTerminee: false };
   }
 
   return { classeTerminee: false };

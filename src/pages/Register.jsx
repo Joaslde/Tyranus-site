@@ -49,7 +49,6 @@ const Register = () => {
       .from("classes")
       .select("*")
       .eq("cycle_id", form.cycle_id)
-      .eq("est_modulaire", false)
       .order("ordre")
       .then(({ data, error }) => {
         if (error) console.error("Erreur classes:", error.message);
@@ -267,11 +266,9 @@ const Register = () => {
                     className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#1A237E] outline-none bg-white"
                   >
                     <option value="">— Choisir un cycle —</option>
-                    {cycles
-                      .filter((c) => c.nom !== "Formations Modulaires")
-                      .map((c) => (
-                        <option key={c.id} value={c.id}>{c.nom}</option>
-                      ))}
+                    {cycles.map((c) => (
+                      <option key={c.id} value={c.id}>{c.nom}</option>
+                    ))}
                   </select>
                   {cycles.length === 0 && (
                     <p className="text-xs text-red-500 mt-1">Chargement des cycles...</p>
