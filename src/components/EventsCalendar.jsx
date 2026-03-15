@@ -1,8 +1,8 @@
 import React from 'react';
 import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import { Calendar, MapPin, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useToast } from '@/components/ui/use-toast';
 
 const events = [
   {
@@ -36,14 +36,7 @@ const events = [
 ];
 
 const EventsCalendar = () => {
-  const { toast } = useToast();
-
-  const handleRegister = (eventTitle) => {
-    toast({
-      title: "🚧 Cette fonctionnalité n'est pas encore implémentée",
-      description: "Mais ne vous inquiétez pas ! Vous pouvez la demander dans votre prochaine requête ! 🚀"
-    });
-  };
+  const navigate = useNavigate();
 
   return (
     <section className="py-20 bg-white">
@@ -97,7 +90,7 @@ const EventsCalendar = () => {
               </p>
               
               <Button
-                onClick={() => handleRegister(event.title)}
+                onClick={() => navigate('/contact')}
                 className="bg-[#1A237E] hover:bg-[#1A237E]/90 text-white"
               >
                 S'inscrire

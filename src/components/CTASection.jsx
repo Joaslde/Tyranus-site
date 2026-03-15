@@ -1,18 +1,11 @@
 import React from 'react';
 import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { useToast } from '@/components/ui/use-toast';
 import { ArrowRight } from 'lucide-react';
 
 const CTASection = () => {
-  const { toast } = useToast();
-
-  const handleCTA = () => {
-    toast({
-      title: "🚧 Cette fonctionnalité n'est pas encore implémentée",
-      description: "Mais ne vous inquiétez pas ! Vous pouvez la demander dans votre prochaine requête ! 🚀"
-    });
-  };
+  const navigate = useNavigate();
 
   return (
     <section className="py-20 bg-gradient-to-br from-[#1A237E] to-[#1A237E]/90 relative overflow-hidden">
@@ -40,7 +33,7 @@ const CTASection = () => {
             whileTap={{ scale: 0.95 }}
           >
             <Button
-              onClick={handleCTA}
+              onClick={() => navigate('/contact')}
               size="lg"
               className="bg-[#D4AF37] hover:bg-[#D4AF37]/90 text-white text-lg px-8 py-6 rounded-lg shadow-xl"
             >
