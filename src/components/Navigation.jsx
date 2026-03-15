@@ -52,13 +52,13 @@ const Navigation = () => {
               La Formation
             </Link>
             
-            <Link
+            {/* <Link
               to="/ressources"
               className="text-gray-700 hover:text-[#D4AF37] transition-colors duration-300 font-medium"
             >
               Ressources
             </Link>
-            
+             */}
             {/* Dropdown À Propos */}
             <div className="relative">
               <button
