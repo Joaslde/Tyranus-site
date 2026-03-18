@@ -1,5 +1,5 @@
-import React from 'react';
-import { motion } from 'framer-motion';
+import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
   BookOpen, 
   GraduationCap, 
@@ -10,8 +10,11 @@ import {
   Mic2, 
   Megaphone,
   Library,
-  Sparkles
+  Sparkles,
+  Eye,
+  X
 } from 'lucide-react';
+import { courseModules } from '../data/courseModules';
 
 const formationGroups = [
   {
@@ -104,6 +107,8 @@ const formationGroups = [
 ];
 
 const FormationCycles = () => {
+  const [selectedModules, setSelectedModules] = useState(null);
+
   return (
     <section className="py-20 bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -175,9 +180,31 @@ const FormationCycles = () => {
                         {item.title}
                       </h4>
                       
-                      <p className="text-gray-600 text-sm leading-relaxed mb-4">
+                      <p className="text-gray-600 text-sm leading-relaxed mb-14">
                         {item.desc}
                       </p>
+
+                      {group.title !== "FORMATIONS MODULAIRES" && (
+                        <div className="absolute bottom-4 right-4 z-10">
+                          <button
+                            onClick={() => {
+                              const key = `${item.title}_${group.title}`;
+                              const modulesForClass = courseModules[key] || [];
+                              
+                              setSelectedModules({
+                                title: item.title,
+                                cycle: group.title,
+                                modules: modulesForClass,
+                                themeColor: group.themeColor
+                              });
+                            }}
+                            className={`flex items-center gap-2 px-3 py-1.5 text-sm font-semibold text-white bg-gradient-to-r ${group.themeColor} rounded-full transition-all duration-300 shadow-md hover:shadow-lg hover:scale-105`}
+                          >
+                            <Eye className="w-4 h-4" />
+                            Voir les modules
+                          </button>
+                        </div>
+                      )}
 
                       <div className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-current to-transparent opacity-0 group-hover:opacity-10 transition-opacity text-[#1A237E]" />
                     </div>
@@ -188,6 +215,70 @@ const FormationCycles = () => {
           ))}
         </div>
       </div>
+
+      <AnimatePresence>
+        {selectedModules && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              transition={{ type: "spring", duration: 0.5, bounce: 0.3 }}
+              className="relative w-full max-w-lg overflow-hidden bg-white shadow-2xl rounded-2xl"
+            >
+              <div className={`p-6 border-b border-gray-100 bg-gradient-to-r ${selectedModules.themeColor}`}>
+                <div className="flex items-start justify-between">
+                  <div className="text-white">
+                    <h3 className="text-xs font-bold tracking-widest uppercase opacity-90">
+                      {selectedModules.cycle}
+                    </h3>
+                    <h2 className="mt-1 text-2xl font-bold font-serif">
+                      Modules - {selectedModules.title}
+                    </h2>
+                  </div>
+                  <button
+                    onClick={() => setSelectedModules(null)}
+                    className="p-2 text-white bg-white/20 transition-colors rounded-full hover:bg-white/30 backdrop-blur-md"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+              
+              <div className="p-6 max-h-[60vh] overflow-y-auto custom-scrollbar">
+                {selectedModules.modules && selectedModules.modules.length > 0 ? (
+                  <ul className="space-y-3">
+                    {selectedModules.modules.map((module, idx) => (
+                      <motion.li
+                        key={idx}
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: idx * 0.05 }}
+                        className="flex items-start gap-4 p-4 transition-colors rounded-xl bg-gray-50 border border-gray-100 hover:border-indigo-200 hover:bg-indigo-50/50 hover:shadow-sm"
+                      >
+                        <span className={`flex items-center justify-center w-7 h-7 text-xs font-bold text-white bg-gradient-to-br ${selectedModules.themeColor} rounded-full shrink-0 shadow-sm mt-0.5`}>
+                          {idx + 1}
+                        </span>
+                        <span className="text-gray-700 leading-relaxed font-medium">
+                          {module}
+                        </span>
+                      </motion.li>
+                    ))}
+                  </ul>
+                ) : (
+                  <div className="text-center py-12 text-gray-500">
+                    <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 mb-4">
+                      <BookOpen className="w-8 h-8 text-gray-400" />
+                    </div>
+                    <p className="text-lg font-medium text-gray-900 mb-1">Aucun module</p>
+                    <p className="text-sm">Les modules pour cette classe ne sont pas encore disponibles.</p>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </section>
   );
 };
