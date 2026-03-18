@@ -1,6 +1,6 @@
 import React from "react";
 import { Helmet } from "react-helmet";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import Navigation from "@/components/Navigation";
@@ -48,8 +48,8 @@ const CLEAN_ROUTES = [
 const isCleanRoute = (path) => CLEAN_ROUTES.some((r) => path.startsWith(r));
 
 function AppContent() {
-  const path = window.location.pathname;
-  const clean = isCleanRoute(path);
+  const { pathname } = useLocation();
+  const clean = isCleanRoute(pathname);
 
   return (
     <div className="min-h-screen bg-white flex flex-col">
