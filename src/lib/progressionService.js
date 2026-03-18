@@ -5,7 +5,7 @@ import { supabase } from "@/lib/supabaseClient";
  * Then check if all courses in the class are done — if so, insert diploma and clear classe_id.
  */
 export async function completeCours(userId, coursId, classeId) {
-  // 1. Upsert the progression record
+  // 1. Upsert avec onConflict sur la contrainte UNIQUE (évite les doublons)
   const { error } = await supabase
     .from("progression")
     .upsert({
@@ -13,9 +13,7 @@ export async function completeCours(userId, coursId, classeId) {
       cours_id: coursId,
       completed: true,
       completed_at: new Date().toISOString(),
-    })
-    .eq("user_id", userId)
-    .eq("cours_id", coursId);
+    }, { onConflict: "user_id,cours_id" });
 
   if (error) return { error };
 
