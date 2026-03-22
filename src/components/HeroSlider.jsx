@@ -6,7 +6,7 @@ const slides = [
   {
     id: 1,
     title: "Une école de théologie et de brisement du caractère",
-    image: <img alt="Groupe d'étudiants lisant la Bible ensemble" className="w-full h-full object-cover" src="https://images.unsplash.com/photo-1567802927933-f10bc19cf850" />
+    image: <img alt="Groupe d'étudiants lisant la Bible ensemble" className="w-full h-full object-cover" src="https://www.excellepourchristinternational.org/photo_5956308823200959375_y.jpg" />
   },
   {
     id: 2,
@@ -16,7 +16,7 @@ const slides = [
   {
     id: 3,
     title: "L'excellence au service du Royaume de Dieu",
-    image: <img alt="Salle de classe moderne pour formation biblique" className="w-full h-full object-cover" src="https://images.unsplash.com/photo-1573894998033-c0cef4ed722b" />
+    image: <img alt="Salle de classe moderne pour formation biblique" className="w-full h-full object-cover" src="https://images.unsplash.com/photo-1504052434569-70ad5836ab65?w=1920&q=80" />
   }
 ];
 
