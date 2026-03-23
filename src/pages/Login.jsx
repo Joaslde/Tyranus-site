@@ -92,7 +92,7 @@ const Login = () => {
 
           <div className="text-center mb-8">
             <h1 className="text-2xl font-serif font-bold text-[#1A237E] mb-2">
-              Espace Étudiant
+              Mon espace 
             </h1>
             <p className="text-gray-600 text-sm">
               Connectez-vous pour accéder à vos cours

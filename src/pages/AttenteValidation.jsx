@@ -34,7 +34,7 @@ const AttenteValidation = () => {
           <div className="flex items-center justify-center gap-2 text-xs text-gray-400 mb-8">
             <Mail className="w-4 h-4" />
             <span>
-              Vérifiez aussi votre email pour confirmer votre adresse.
+              Vous serez informer quand ceci sera fait
             </span>
           </div>
           <Button
