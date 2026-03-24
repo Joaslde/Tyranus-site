@@ -3,12 +3,13 @@ import { Helmet } from "react-helmet";
 import {
   Plus, BookOpen, Users, LogOut, Eye, EyeOff, Layers,
   GraduationCap, X, AlertTriangle, ExternalLink, Globe,
-  GlobeLock, Trash2,
+  GlobeLock, Trash2, CheckCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabaseClient";
 
+// ─── YouTube embed ────────────────────────────────────────────────────────────
 const toEmbedUrl = (url) => {
   if (!url) return "";
   if (url.includes("youtube.com/embed/")) return url;
@@ -19,10 +20,13 @@ const toEmbedUrl = (url) => {
   return url;
 };
 
+// ─── Modal confirmation (z-index inline pour passer au-dessus de tout) ────────
 const ConfirmModal = ({ open, title, message, danger, onConfirm, onCancel }) => {
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 px-4 pb-4 sm:pb-0">
+    <div
+      style={{ position: "fixed", inset: 0, zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", backgroundColor: "rgba(0,0,0,0.6)", padding: "16px" }}
+    >
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6">
         <div className="flex items-center gap-3 mb-3">
           <div className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 ${danger ? "bg-red-100" : "bg-amber-100"}`}>
@@ -32,18 +36,44 @@ const ConfirmModal = ({ open, title, message, danger, onConfirm, onCancel }) => 
         </div>
         <p className="text-sm text-gray-600 mb-5">{message}</p>
         <div className="flex gap-3">
-          <button onClick={onCancel} className="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50">Annuler</button>
-          <button onClick={onConfirm} className={`flex-1 px-4 py-2.5 rounded-lg text-sm font-medium text-white ${danger ? "bg-red-600 hover:bg-red-700" : "bg-[#1A237E] hover:bg-[#1A237E]/90"}`}>Confirmer</button>
+          <button onClick={onCancel} className="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50">
+            Annuler
+          </button>
+          <button onClick={onConfirm} className={`flex-1 px-4 py-2.5 rounded-lg text-sm font-medium text-white ${danger ? "bg-red-600 hover:bg-red-700" : "bg-[#1A237E] hover:bg-[#1A237E]/90"}`}>
+            Confirmer
+          </button>
         </div>
       </div>
     </div>
   );
 };
 
-const PreviewModal = ({ cours, onClose, onPublishClick, toggling }) => {
+// ─── Modal succès ajout cours ─────────────────────────────────────────────────
+const SuccessModal = ({ open, onClose }) => {
+  if (!open) return null;
+  return (
+    <div style={{ position: "fixed", inset: 0, zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", backgroundColor: "rgba(0,0,0,0.5)", padding: "16px" }}>
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 text-center">
+        <div className="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+          <CheckCircle className="w-7 h-7 text-green-600" />
+        </div>
+        <h3 className="font-bold text-gray-800 text-lg mb-2">Cours ajouté !</h3>
+        <p className="text-sm text-gray-500 mb-6">
+          Votre cours a été enregistré avec succès. Il est en brouillon — publiez-le quand il est prêt.
+        </p>
+        <button onClick={onClose} className="w-full px-4 py-2.5 bg-[#1A237E] text-white rounded-xl text-sm font-medium hover:bg-[#1A237E]/90">
+          D'accord
+        </button>
+      </div>
+    </div>
+  );
+};
+
+// ─── Modal aperçu vidéo ───────────────────────────────────────────────────────
+const PreviewModal = ({ cours, onClose, onPublishClick }) => {
   if (!cours) return null;
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4">
+    <div style={{ position: "fixed", inset: 0, zIndex: 8000, display: "flex", alignItems: "center", justifyContent: "center", backgroundColor: "rgba(0,0,0,0.75)", padding: "16px" }}>
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden">
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
           <div className="min-w-0">
@@ -55,10 +85,13 @@ const PreviewModal = ({ cours, onClose, onPublishClick, toggling }) => {
           </button>
         </div>
         <div className="bg-black aspect-video">
-          <iframe src={`${toEmbedUrl(cours.url_youtube)}?rel=0`} title={cours.titre}
+          <iframe
+            src={`${toEmbedUrl(cours.url_youtube)}?rel=0`}
+            title={cours.titre}
             className="w-full h-full"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            allowFullScreen />
+            allowFullScreen
+          />
         </div>
         <div className="px-5 py-4 space-y-3">
           <div className="flex items-center justify-between bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
@@ -69,25 +102,21 @@ const PreviewModal = ({ cours, onClose, onPublishClick, toggling }) => {
             </a>
           </div>
           {cours.description && <p className="text-sm text-gray-600">{cours.description}</p>}
-          <div className="flex gap-3 pt-1">
-            <button onClick={() => onPublishClick(cours)} disabled={toggling}
-              className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors ${
-                cours.publie
-                  ? "bg-amber-100 text-amber-700 hover:bg-amber-200"
-                  : "bg-[#1A237E] text-white hover:bg-[#1A237E]/90"
-              }`}>
-              {cours.publie
-                ? <><GlobeLock className="w-4 h-4" /> Dépublier</>
-                : <><Globe className="w-4 h-4" /> Publier pour les étudiants</>
-              }
-            </button>
-          </div>
+          <button
+            onClick={() => onPublishClick(cours)}
+            className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors ${cours.publie ? "bg-amber-100 text-amber-700 hover:bg-amber-200" : "bg-[#1A237E] text-white hover:bg-[#1A237E]/90"}`}>
+            {cours.publie
+              ? <><GlobeLock className="w-4 h-4" /> Dépublier</>
+              : <><Globe className="w-4 h-4" /> Publier pour les étudiants</>
+            }
+          </button>
         </div>
       </div>
     </div>
   );
 };
 
+// ─── Dashboard ────────────────────────────────────────────────────────────────
 const ProfDashboard = () => {
   const { user, profile, signOut } = useAuth();
   const [tab, setTab]               = useState("cours");
@@ -97,11 +126,11 @@ const ProfDashboard = () => {
   const [etudiants, setEtudiants]   = useState([]);
   const [form, setForm]             = useState({ titre: "", description: "", url_youtube: "", classe_id: "" });
   const [saving, setSaving]         = useState(false);
-  const [msg, setMsg]               = useState("");
-  const [previewCours, setPreviewCours] = useState(null);
-  const [toggling, setToggling]     = useState(false);
-  const [confirmModal, setConfirmModal] = useState({ open: false, type: "", cours: null });
+  const [previewCours, setPreviewCours]   = useState(null);
+  const [successModal, setSuccessModal]   = useState(false);
+  const [confirmModal, setConfirmModal]   = useState({ open: false, type: "", cours: null });
 
+  // ── Chargement classes ────────────────────────────────────────────────────
   useEffect(() => {
     if (!user) return;
     Promise.all([
@@ -117,39 +146,44 @@ const ProfDashboard = () => {
     });
   }, [user]);
 
-  useEffect(() => {
-    if (!selectedClasse) return;
-    supabase.from("cours").select("*").eq("classe_id", selectedClasse)
+  // ── Chargement cours + étudiants ──────────────────────────────────────────
+  const refreshCours = (classeId) => {
+    supabase.from("cours").select("*").eq("classe_id", classeId || selectedClasse)
       .order("created_at", { ascending: true })
       .then(({ data }) => setCours(data || []));
+  };
+
+  useEffect(() => {
+    if (!selectedClasse) return;
+    refreshCours(selectedClasse);
     supabase.from("profiles").select("id, nom, prenom, statut")
       .eq("classe_id", selectedClasse).eq("role", "etudiant")
       .then(({ data }) => setEtudiants(data || []));
   }, [selectedClasse]);
 
-  const refreshCours = () => supabase.from("cours").select("*").eq("classe_id", selectedClasse)
-    .order("created_at", { ascending: true }).then(({ data }) => setCours(data || []));
-
+  // ── Ajout cours ───────────────────────────────────────────────────────────
   const handleAddCours = async (e) => {
     e.preventDefault();
-    if (!form.classe_id) { setMsg("❌ Veuillez sélectionner une classe."); return; }
-    setSaving(true); setMsg("");
+    if (!form.classe_id) return;
+    setSaving(true);
     const { error } = await supabase.from("cours").insert({
       titre: form.titre, description: form.description,
       url_youtube: form.url_youtube, classe_id: form.classe_id,
       created_by: user.id, publie: false,
     });
-    if (error) { setMsg("❌ Erreur : " + error.message); }
-    else { setMsg("✅ Cours ajouté !"); setForm(f => ({ ...f, titre: "", description: "", url_youtube: "" })); refreshCours(); }
+    if (!error) {
+      setSuccessModal(true);
+      setForm(f => ({ ...f, titre: "", description: "", url_youtube: "" }));
+      refreshCours();
+    }
     setSaving(false);
   };
 
+  // ── Toggle publish ─────────────────────────────────────────────────────────
   const doTogglePublish = async (c) => {
-    setToggling(true);
     await supabase.from("cours").update({ publie: !c.publie }).eq("id", c.id);
     setCours(prev => prev.map(x => x.id === c.id ? { ...x, publie: !x.publie } : x));
     if (previewCours?.id === c.id) setPreviewCours(p => ({ ...p, publie: !p.publie }));
-    setToggling(false);
   };
 
   const handlePublishClick = (c) => setConfirmModal({
@@ -174,7 +208,15 @@ const ProfDashboard = () => {
     <>
       <Helmet><title>Dashboard Professeur — École Tyrannus</title></Helmet>
 
-      <ConfirmModal open={confirmModal.open}
+      {/* Ordre DOM : PreviewModal en premier, ConfirmModal + SuccessModal en dernier */}
+      {/* → les éléments rendus APRÈS ont priorité d'affichage peu importe le z-index */}
+      <PreviewModal
+        cours={previewCours}
+        onClose={() => setPreviewCours(null)}
+        onPublishClick={handlePublishClick}
+      />
+      <ConfirmModal
+        open={confirmModal.open}
         danger={confirmModal.type === "supprimer"}
         title={
           confirmModal.type === "supprimer" ? "Supprimer ce cours ?"
@@ -191,11 +233,11 @@ const ProfDashboard = () => {
         onConfirm={handleConfirm}
         onCancel={() => setConfirmModal({ open: false, type: "", cours: null })}
       />
-
-      <PreviewModal cours={previewCours} onClose={() => setPreviewCours(null)}
-        onPublishClick={handlePublishClick} toggling={toggling} />
+      <SuccessModal open={successModal} onClose={() => setSuccessModal(false)} />
 
       <div className="bg-[#F5F5F5] min-h-screen pb-20">
+
+        {/* Header */}
         <div className="bg-[#1A237E] text-white py-8 px-4">
           <div className="max-w-5xl mx-auto flex items-center justify-between">
             <div>
@@ -209,25 +251,37 @@ const ProfDashboard = () => {
         </div>
 
         <div className="max-w-5xl mx-auto px-4 mt-6">
+
+          {/* Sélecteur classe / module */}
           <div className="bg-white rounded-xl shadow p-5 mb-6">
             <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-4">Sélectionner une classe ou un module</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <label className="flex items-center gap-2 text-sm font-medium text-gray-700"><GraduationCap className="w-4 h-4 text-[#1A237E]" /> Classe</label>
-                <select value={!mesClasses.find(c => c.id === selectedClasse)?.est_modulaire ? selectedClasse : ""}
+                <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                  <GraduationCap className="w-4 h-4 text-[#1A237E]" /> Classe
+                </label>
+                <select
+                  value={!mesClasses.find(c => c.id === selectedClasse)?.est_modulaire ? selectedClasse : ""}
                   onChange={e => { if (!e.target.value) return; setSelectedClasse(e.target.value); setForm(f => ({ ...f, classe_id: e.target.value })); }}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-[#1A237E] outline-none bg-white">
                   <option value="">— Choisir une classe —</option>
-                  {mesClasses.filter(c => !c.est_modulaire).map(c => <option key={c.id} value={c.id}>{c.nom} — {c.cycle?.nom}</option>)}
+                  {mesClasses.filter(c => !c.est_modulaire).map(c => (
+                    <option key={c.id} value={c.id}>{c.nom} — {c.cycle?.nom}</option>
+                  ))}
                 </select>
               </div>
               <div className="space-y-1.5">
-                <label className="flex items-center gap-2 text-sm font-medium text-gray-700"><Layers className="w-4 h-4 text-[#1A237E]" /> Formation modulaire</label>
-                <select value={mesClasses.find(c => c.id === selectedClasse)?.est_modulaire ? selectedClasse : ""}
+                <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                  <Layers className="w-4 h-4 text-[#1A237E]" /> Formation modulaire
+                </label>
+                <select
+                  value={mesClasses.find(c => c.id === selectedClasse)?.est_modulaire ? selectedClasse : ""}
                   onChange={e => { if (!e.target.value) return; setSelectedClasse(e.target.value); setForm(f => ({ ...f, classe_id: e.target.value })); }}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-[#1A237E] outline-none bg-white">
                   <option value="">— Choisir un module —</option>
-                  {mesClasses.filter(c => c.est_modulaire).map(c => <option key={c.id} value={c.id}>{c.nom}</option>)}
+                  {mesClasses.filter(c => c.est_modulaire).map(c => (
+                    <option key={c.id} value={c.id}>{c.nom}</option>
+                  ))}
                 </select>
               </div>
             </div>
@@ -239,6 +293,7 @@ const ProfDashboard = () => {
             )}
           </div>
 
+          {/* Tabs */}
           <div className="flex border-b border-gray-200 mb-6">
             {[["cours","Cours",BookOpen],["etudiants","Étudiants",Users],["ajouter","Ajouter un cours",Plus]].map(([key,label,Icon]) => (
               <button key={key} onClick={() => setTab(key)}
@@ -248,41 +303,79 @@ const ProfDashboard = () => {
             ))}
           </div>
 
+          {/* ── Tab: Liste des cours ── */}
           {tab === "cours" && (
             <div className="space-y-3">
-              {cours.length === 0 && <div className="bg-white rounded-xl p-8 text-center text-gray-400 shadow">Aucun cours pour cette classe.</div>}
+              {cours.length === 0 && (
+                <div className="bg-white rounded-xl p-8 text-center text-gray-400 shadow">Aucun cours pour cette classe.</div>
+              )}
               {cours.map((c, i) => (
-                <div key={c.id} className="bg-white rounded-xl shadow p-4 flex items-center gap-4 hover:shadow-md transition-shadow">
-                  <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-sm font-bold text-gray-400 flex-shrink-0">{i + 1}</div>
+                <div key={c.id} className="bg-white rounded-xl shadow hover:shadow-md transition-shadow">
 
-                  <button onClick={() => setPreviewCours(c)} className="flex-1 min-w-0 text-left group">
-                    <p className="font-medium text-[#1A237E] truncate group-hover:underline">{c.titre}</p>
-                    <p className="text-xs text-gray-400 truncate">{c.url_youtube}</p>
-                  </button>
+                  {/* Layout vertical — responsive */}
+                  <div className="p-4">
 
-                  <span className={`text-xs px-2.5 py-1 rounded-full font-medium flex-shrink-0 ${c.publie ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>
-                    {c.publie ? "Publié" : "Brouillon"}
-                  </span>
+                    {/* Ligne titre + badge + poubelle */}
+                    <div className="flex items-start justify-between gap-3 mb-3">
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
+                        {/* Numéro */}
+                        <div className="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center text-xs font-bold text-gray-400 flex-shrink-0">
+                          {i + 1}
+                        </div>
+                        {/* Titre complet — pas de truncate */}
+                        <p className="font-semibold text-[#1A237E] leading-snug">{c.titre}</p>
+                      </div>
 
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    <button onClick={() => setPreviewCours(c)} title="Aperçu"
-                      className="text-gray-400 hover:text-[#1A237E] p-1.5 rounded-lg hover:bg-gray-100 transition-colors">
-                      <Eye className="w-4 h-4" />
-                    </button>
-                    <button onClick={() => handlePublishClick(c)}
-                      className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg font-medium transition-colors ${c.publie ? "bg-amber-100 text-amber-700 hover:bg-amber-200" : "bg-green-100 text-green-700 hover:bg-green-200"}`}>
-                      {c.publie ? <><EyeOff className="w-3.5 h-3.5" /> Dépublier</> : <><Globe className="w-3.5 h-3.5" /> Publier</>}
-                    </button>
-                    <button onClick={() => handleDeleteClick(c)} title="Supprimer"
-                      className="text-red-400 hover:text-red-600 p-1.5 rounded-lg hover:bg-red-50 transition-colors">
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        {/* Badge statut */}
+                        <span className={`text-xs px-2.5 py-1 rounded-full font-medium hidden sm:inline ${c.publie ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>
+                          {c.publie ? "Publié" : "Brouillon"}
+                        </span>
+                        {/* Poubelle en haut à droite */}
+                        <button onClick={() => handleDeleteClick(c)} title="Supprimer"
+                          className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Description courte si présente */}
+                    {c.description && (
+                      <p className="text-xs text-gray-500 ml-10 mb-3 line-clamp-2">{c.description}</p>
+                    )}
+
+                    {/* Badge mobile */}
+                    <div className="flex items-center gap-2 ml-10 mb-3 sm:hidden">
+                      <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${c.publie ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>
+                        {c.publie ? "Publié" : "Brouillon"}
+                      </span>
+                    </div>
+
+                    {/* Boutons en bas — côte à côte */}
+                    <div className="flex gap-2 ml-10">
+                      <button onClick={() => setPreviewCours(c)}
+                        className="flex-1 flex items-center justify-center gap-1.5 text-xs text-[#1A237E] border border-[#1A237E] px-3 py-2 rounded-lg font-medium hover:bg-blue-50 transition-colors">
+                        <Eye className="w-3.5 h-3.5" /> Voir la vidéo
+                      </button>
+                      <button onClick={() => handlePublishClick(c)}
+                        className={`flex-1 flex items-center justify-center gap-1.5 text-xs px-3 py-2 rounded-lg font-medium transition-colors ${
+                          c.publie
+                            ? "bg-amber-100 text-amber-700 hover:bg-amber-200"
+                            : "bg-green-100 text-green-700 hover:bg-green-200"
+                        }`}>
+                        {c.publie
+                          ? <><EyeOff className="w-3.5 h-3.5" /> Dépublier</>
+                          : <><Globe className="w-3.5 h-3.5" /> Publier</>
+                        }
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}
             </div>
           )}
 
+          {/* ── Tab: Étudiants ── */}
           {tab === "etudiants" && (
             <div className="bg-white rounded-xl shadow overflow-hidden">
               <table className="w-full text-sm">
@@ -293,7 +386,9 @@ const ProfDashboard = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
-                  {etudiants.length === 0 && <tr><td colSpan={2} className="text-center text-gray-400 p-8">Aucun étudiant dans cette classe.</td></tr>}
+                  {etudiants.length === 0 && (
+                    <tr><td colSpan={2} className="text-center text-gray-400 p-8">Aucun étudiant dans cette classe.</td></tr>
+                  )}
                   {etudiants.map(e => (
                     <tr key={e.id} className="hover:bg-gray-50">
                       <td className="p-4 font-medium text-[#1A237E]">{e.prenom} {e.nom}</td>
@@ -309,26 +404,30 @@ const ProfDashboard = () => {
             </div>
           )}
 
+          {/* ── Tab: Ajouter un cours ── */}
           {tab === "ajouter" && (
             <div className="bg-white rounded-xl shadow p-6 max-w-lg">
               <h2 className="text-lg font-bold text-[#1A237E] mb-5">Ajouter un cours vidéo</h2>
-              {msg && <p className={`text-sm mb-4 ${msg.startsWith("✅") ? "text-green-600" : "text-red-600"}`}>{msg}</p>}
               <form onSubmit={handleAddCours} className="space-y-4">
                 <div>
                   <label className="text-xs font-medium text-gray-700 mb-1 block">Titre du cours *</label>
-                  <input required value={form.titre} onChange={e => setForm(f => ({ ...f, titre: e.target.value }))}
+                  <input required value={form.titre}
+                    onChange={e => setForm(f => ({ ...f, titre: e.target.value }))}
                     className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#1A237E] outline-none"
                     placeholder="Introduction à l'Exégèse" />
                 </div>
                 <div>
                   <label className="text-xs font-medium text-gray-700 mb-1 block">Description</label>
-                  <textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
-                    rows={3} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#1A237E] outline-none resize-none"
+                  <textarea value={form.description}
+                    onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
+                    rows={3}
+                    className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#1A237E] outline-none resize-none"
                     placeholder="Courte description du cours..." />
                 </div>
                 <div>
                   <label className="text-xs font-medium text-gray-700 mb-1 block">Lien YouTube *</label>
-                  <input required value={form.url_youtube} onChange={e => setForm(f => ({ ...f, url_youtube: e.target.value }))}
+                  <input required value={form.url_youtube}
+                    onChange={e => setForm(f => ({ ...f, url_youtube: e.target.value }))}
                     className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#1A237E] outline-none"
                     placeholder="https://www.youtube.com/watch?v=..." />
                 </div>
@@ -338,6 +437,7 @@ const ProfDashboard = () => {
               </form>
             </div>
           )}
+
         </div>
       </div>
     </>

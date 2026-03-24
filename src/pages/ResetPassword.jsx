@@ -36,8 +36,8 @@ const ResetPassword = () => {
     e.preventDefault();
     setError("");
 
-    if (password.length < 8) {
-      setError("Le mot de passe doit contenir au moins 8 caractères.");
+    if (password.length < 6) {
+      setError("Le mot de passe doit contenir au moins 6 caractères.");
       return;
     }
     if (password !== confirm) {
@@ -144,7 +144,7 @@ const ResetPassword = () => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="w-full pl-10 pr-10 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1A237E] focus:border-transparent outline-none"
-                  placeholder="Minimum 8 caractères"
+                  placeholder="Minimum 6 caractères"
                 />
                 <button type="button" onClick={() => setShowPw(!showPw)}
                   className="absolute right-3 top-3 text-gray-400 hover:text-gray-600">
@@ -176,7 +176,7 @@ const ResetPassword = () => {
                 password.length >= 12 && /[A-Z]/.test(password) && /[0-9]/.test(password) ? 4
                 : password.length >= 12 && /[A-Z]/.test(password) ? 3
                 : password.length >= 10 ? 2
-                : password.length >= 8 ? 1 : 0;
+                : password.length >= 6 ? 1 : 0;
               const colors = ["bg-gray-200", "bg-red-400", "bg-orange-400", "bg-yellow-400", "bg-green-500"];
               const labels = ["Trop court", "Faible", "Moyen", "Bon", "Fort"];
               return (
