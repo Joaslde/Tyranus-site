@@ -8,37 +8,37 @@ const History = () => {
       year: "2001",
       title: "La Fondation",
       text: "Le 5 avril 2001, l'Apôtre Janine AHO pose les premières pierres de ce qui allait devenir une œuvre internationale. Fondée à Guinkomey, Cotonou, sous le nom de Fondation Internationale Mont Horeb, la vision était claire : proclamer l'Évangile de Jésus-Christ avec fidélité et transformer des vies.",
-      image: <img alt="Fondation de l'œuvre à Cotonou en 2001" className="w-full h-full object-cover" src="https://res.cloudinary.com/dmngvz0f4/image/upload/v1767013074/photo_2025-12-29_12-06-43_bvxxdp.jpg" />
+      image: <img alt="Fondation de l'œuvre à Cotonou en 2001" className="w-full h-full object-cover" src="/IMG-20260324-WA0007.jpg" />
     },
     {
       year: "2005",
       title: "Première Expansion",
       text: "Portée par une croissance remarquable, l'œuvre s'étend au-delà de Cotonou. De nouvelles assemblées s'ouvrent dans plusieurs villes du Bénin, touchant des milliers de familles et posant les bases d'un réseau d'églises locales solides et enracinées.",
-      image: <img alt="Expansion dans plusieurs villes du Bénin" className="w-full h-full object-cover" src="https://images.unsplash.com/photo-1671036627297-ff1034a0f572" />
+      image: <img alt="Expansion dans plusieurs villes du Bénin" className="w-full h-full object-cover" src="/IMG-20260324-WA0008.jpg" />
     },
     {
       year: "2010",
       title: "Naissance de l'École Tyrannus",
       text: "Comme Paul qui enseignait quotidiennement dans l'école de Tyrannus, l'Apôtre Janine AHO lance une école de formation biblique dédiée à équiper les leaders. L'École Tyrannus ouvre ses portes avec une mission : former des disciples non seulement de diplômes, mais de la puissance de l'Esprit.",
-      image: <img alt="Lancement de l'École Tyrannus" className="w-full h-full object-cover" src="https://images.unsplash.com/photo-1541490934015-c75206d75062" />
+      image: <img alt="Lancement de l'École Tyrannus" className="w-full h-full object-cover" src="/IMG-20260324-WA0009.jpg" />
     },
     {
       year: "2015",
       title: "Excelle pour Christ International",
       text: "L'œuvre entre dans une nouvelle ère. La Fondation Internationale Mont Horeb est rebaptisée Excelle pour Christ International — un nom qui reflète l'ADN profond du ministère : appeler chaque croyant à l'excellence pour la gloire de Dieu, sur toutes les nations.",
-      image: <img alt="Nouveau nom, nouvelle identité" className="w-full h-full object-cover" src="https://images.unsplash.com/photo-1702740205505-6a2997365ab7" />
+      image: <img alt="Nouveau nom, nouvelle identité" className="w-full h-full object-cover" src="/IMG-20260324-WA0015.jpg" />
     },
     {
       year: "2018",
       title: "Vers les Nations",
       text: "La vision missionnaire franchit les frontières du Bénin. Excelle pour Christ International étend son impact vers d'autres pays africains, implantant des églises et envoyant des équipes pour proclamer l'Évangile du Royaume là où la Parole n'a pas encore retenti.",
-      image: <img alt="Extension missionnaire internationale" className="w-full h-full object-cover" src="https://images.unsplash.com/photo-1575581535069-f9ef30a209b3" />
+      image: <img alt="Extension missionnaire internationale" className="w-full h-full object-cover" src="/IMG-20260324-WA0030.jpg" />
     },
     {
       year: "2020",
       title: "Deux Décennies de Fidélité",
       text: "En 2020, l'œuvre célèbre vingt ans de grâce et de fidélité. Des milliers de vies transformées, des leaders formés, des nations touchées — le témoignage est éloquent. Ce qui a commencé à Guinkomey est devenu une communauté vibrante de foi ancrée dans la Parole de Dieu.",
-      image: <img alt="Célébration des 20 ans de l'œuvre" className="w-full h-full object-cover" src="https://images.unsplash.com/photo-1624388611710-bdf95023d1c2" />
+      image: <img alt="Célébration des 20 ans de l'œuvre" className="w-full h-full object-cover" src="/IMG-20260324-WA0037.jpg" />
     }
   ];
 

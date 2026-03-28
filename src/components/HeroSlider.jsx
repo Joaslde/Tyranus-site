@@ -11,12 +11,12 @@ const slides = [
   {
     id: 2,
     title: "Etre à l'image du maître",
-    image: <img alt="Bible ouverte avec lumière naturelle" className="w-full h-full object-cover" src="https://images.unsplash.com/photo-1675047373408-2d64c81c0da6" />
+    image: <img alt="Assemblée en prière et communion" className="w-full h-full object-cover" src="/IMG-20260324-WA0015.jpg" />
   },
   {
     id: 3,
     title: "L'excellence au service du Royaume de Dieu",
-    image: <img alt="Salle de classe moderne pour formation biblique" className="w-full h-full object-cover" src="https://images.unsplash.com/photo-1504052434569-70ad5836ab65?w=1920&q=80" />
+    image: <img alt="Moments de formation et d'adoration" className="w-full h-full object-cover" src="/IMG-20260324-WA0030.jpg" />
   }
 ];
 

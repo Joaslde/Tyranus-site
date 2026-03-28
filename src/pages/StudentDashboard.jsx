@@ -409,7 +409,7 @@ const StudentDashboard = () => {
                           {c.description && <p className="text-xs text-gray-500 truncate">{c.description}</p>}
                         </div>
                         <ChevronRight className="w-5 h-5 text-gray-300 flex-shrink-0" />
-                      </div>
+                      </div> <br />
                     </Link>
                   ))}
                 </div>
