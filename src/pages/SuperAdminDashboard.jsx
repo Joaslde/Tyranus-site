@@ -3,11 +3,12 @@ import { Helmet } from "react-helmet";
 import {
   Users, BookOpen, Clock, CheckCircle, XCircle, LogOut,
   GraduationCap, AlertTriangle, ShieldOff, Filter, ChevronDown,
-  CalendarCheck, CalendarX, UserCog, ArrowRight, Layers, Trash2,
+  CalendarCheck, CalendarX, UserCog, ArrowRight, Layers, Trash2, Eye, X,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabaseClient";
 import { setFinAnneeActive } from "@/lib/progressionService";
+import ProfDashboard from "@/pages/ProfDashboard";
 
 // ─── Modal générique ──────────────────────────────────────────────────────────
 const Modal = ({ open, title, onCancel, children }) => {
@@ -22,7 +23,7 @@ const Modal = ({ open, title, onCancel, children }) => {
   );
 };
 
-// ─── Modal confirmation bulk (valider/rejeter/suspendre) ─────────────────────
+// ─── Modal confirmation bulk ──────────────────────────────────────────────────
 const ConfirmModal = ({ open, action, targets, onConfirm, onCancel }) => {
   const [countdown, setCountdown] = useState(0);
   useEffect(() => {
@@ -35,9 +36,9 @@ const ConfirmModal = ({ open, action, targets, onConfirm, onCancel }) => {
   }, [open, targets.length]);
   if (!open) return null;
   const meta = {
-    valide:  { label: "Valider",   color: "bg-green-600 hover:bg-green-700",   Icon: CheckCircle },
-    rejete:  { label: "Rejeter",   color: "bg-red-600 hover:bg-red-700",       Icon: XCircle },
-    suspend: { label: "Suspendre", color: "bg-orange-600 hover:bg-orange-700", Icon: ShieldOff },
+    valide:  { label: "Valider",   color: "bg-green-600 hover:bg-green-700" },
+    rejete:  { label: "Rejeter",   color: "bg-red-600 hover:bg-red-700" },
+    suspend: { label: "Suspendre", color: "bg-orange-600 hover:bg-orange-700" },
   };
   const a = meta[action] || {};
   return (
@@ -47,10 +48,7 @@ const ConfirmModal = ({ open, action, targets, onConfirm, onCancel }) => {
           <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
             <AlertTriangle className="w-5 h-5 text-amber-600" />
           </div>
-          <div>
-            <h2 className="font-bold text-gray-800">Confirmer l'action</h2>
-            <p className="text-xs text-gray-500">{targets.length} élément(s)</p>
-          </div>
+          <div><h2 className="font-bold text-gray-800">Confirmer l'action</h2><p className="text-xs text-gray-500">{targets.length} élément(s)</p></div>
         </div>
         <div className="bg-gray-50 rounded-xl p-3 mb-5 max-h-40 overflow-y-auto space-y-1">
           {targets.map(t => <div key={t.id} className="text-sm text-gray-700">{t.prenom} {t.nom}</div>)}
@@ -58,7 +56,7 @@ const ConfirmModal = ({ open, action, targets, onConfirm, onCancel }) => {
         <div className="flex gap-3">
           <button onClick={onCancel} className="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50">Annuler</button>
           <button onClick={onConfirm} disabled={countdown > 0}
-            className={`flex-1 px-4 py-2.5 rounded-lg text-sm font-medium text-white transition-all ${countdown > 0 ? "bg-gray-300 cursor-not-allowed" : a.color}`}>
+            className={`flex-1 px-4 py-2.5 rounded-lg text-sm font-medium text-white ${countdown > 0 ? "bg-gray-300 cursor-not-allowed" : a.color}`}>
             {countdown > 0 ? `Attendre ${countdown}s...` : `${a.label} (${targets.length})`}
           </button>
         </div>
@@ -84,22 +82,17 @@ const DeleteModal = ({ open, target, onConfirm, onCancel }) => {
           <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
             <Trash2 className="w-5 h-5 text-red-600" />
           </div>
-          <div>
-            <h2 className="font-bold text-gray-800">Suppression définitive</h2>
-            <p className="text-xs text-red-500">Cette action est irréversible</p>
-          </div>
+          <div><h2 className="font-bold text-gray-800">Suppression définitive</h2><p className="text-xs text-red-500">Action irréversible</p></div>
         </div>
         <div className="bg-red-50 border border-red-200 rounded-xl p-3 mb-4">
           <p className="text-sm font-medium text-red-800">{target.prenom} {target.nom}</p>
           <p className="text-xs text-red-600 mt-0.5">{target.telephone}</p>
         </div>
-        <p className="text-sm text-gray-600 mb-5">
-          Le profil de cette personne sera <strong>définitivement supprimé</strong> du système. Son historique, ses progressions et ses demandes seront effacés.
-        </p>
+        <p className="text-sm text-gray-600 mb-5">Le profil sera <strong>définitivement supprimé</strong> du système avec tout son historique.</p>
         <div className="flex gap-3">
           <button onClick={onCancel} className="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50">Annuler</button>
           <button onClick={onConfirm} disabled={countdown > 0}
-            className={`flex-1 px-4 py-2.5 rounded-lg text-sm font-medium text-white transition-all ${countdown > 0 ? "bg-gray-300 cursor-not-allowed" : "bg-red-600 hover:bg-red-700"}`}>
+            className={`flex-1 px-4 py-2.5 rounded-lg text-sm font-medium text-white ${countdown > 0 ? "bg-gray-300 cursor-not-allowed" : "bg-red-600 hover:bg-red-700"}`}>
             {countdown > 0 ? `Supprimer dans ${countdown}s` : "Supprimer définitivement"}
           </button>
         </div>
@@ -121,9 +114,7 @@ const BulkBar = ({ selected, onAction, onClear }) => {
       <span className="text-sm font-medium">{selected.length} sélectionné(s)</span>
       <div className="flex gap-2 ml-auto flex-wrap">
         {[["valide","Valider","bg-green-500 hover:bg-green-600",CheckCircle],["rejete","Rejeter","bg-red-500 hover:bg-red-600",XCircle],["suspend","Suspendre","bg-orange-500 hover:bg-orange-600",ShieldOff]].map(([a,l,c,I]) => (
-          <button key={a} onClick={() => onAction(a)} className={`flex items-center gap-1.5 text-xs ${c} px-3 py-1.5 rounded-lg font-medium`}>
-            <I className="w-3.5 h-3.5" /> {l}
-          </button>
+          <button key={a} onClick={() => onAction(a)} className={`flex items-center gap-1.5 text-xs ${c} px-3 py-1.5 rounded-lg font-medium`}><I className="w-3.5 h-3.5" /> {l}</button>
         ))}
         <button onClick={onClear} className="text-xs text-white/70 hover:text-white px-2">Annuler</button>
       </div>
@@ -137,30 +128,27 @@ const SuperAdminDashboard = () => {
   const [tab, setTab]             = useState("etudiants");
   const [etudiants, setEtudiants] = useState([]);
   const [profs, setProfs]         = useState([]);
-  const [profClasses, setProfClasses] = useState({}); // { prof_id: [classe_nom, ...] }
+  const [profClasses, setProfClasses] = useState({});
   const [demandes, setDemandes]   = useState([]);
   const [cycles, setCycles]       = useState([]);
   const [classes, setClasses]     = useState([]);
   const [stats, setStats]         = useState({ etudiants: 0, profs: 0, cours: 0, pending: 0 });
   const [saving, setSaving]       = useState(false);
-  const [passationModal, setPassationModal] = useState({ open: false, action: null, demande: null });
   const [finAnnee, setFinAnnee]   = useState(false);
   const [togglingAnnee, setTogglingAnnee] = useState(false);
-
   const [filterStatut, setFilterStatut] = useState("en_attente");
   const [filterCycle, setFilterCycle]   = useState("");
   const [filterClasse, setFilterClasse] = useState("");
-
   const [selectedEtudiants, setSelectedEtudiants] = useState([]);
   const [selectedProfs, setSelectedProfs]         = useState([]);
-
-  const [modal, setModal]         = useState({ open: false, action: "", targets: [], type: "" });
-  const [finAnneeModal, setFinAnneeModal] = useState(false);
-  const [deleteModal, setDeleteModal] = useState({ open: false, target: null, type: "" });
-
+  const [modal, setModal]             = useState({ open: false, action: "", targets: [], type: "" });
+  const [finAnneeModal, setFinAnneeModal]   = useState(false);
+  const [deleteModal, setDeleteModal]       = useState({ open: false, target: null, type: "" });
+  const [passationModal, setPassationModal] = useState({ open: false, action: null, demande: null });
   const [assignModal, setAssignModal]       = useState(false);
   const [assignEtudiant, setAssignEtudiant] = useState(null);
   const [assignClasseId, setAssignClasseId] = useState("");
+  const [viewAsProfModal, setViewAsProfModal] = useState({ open: false, prof: null });
 
   // ── Load ────────────────────────────────────────────────────────────────────
   const load = useCallback(async () => {
@@ -173,8 +161,7 @@ const SuperAdminDashboard = () => {
         supabase.from("cycles").select("id, nom").order("ordre"),
         supabase.from("classes").select("id, nom, cycle_id, ordre, est_modulaire").order("ordre"),
         supabase.from("settings").select("valeur").eq("cle", "fin_annee_active").maybeSingle(),
-        // Classes assignées aux profs
-        supabase.from("prof_classes").select("prof_id, classe:classe_id(id, nom, est_modulaire)"),
+        supabase.from("prof_classes").select("prof_id, classe:classe_id(id, nom, est_modulaire, cycle:cycle_id(nom))"),
       ]);
 
     // Enrichir demandes
@@ -188,11 +175,15 @@ const SuperAdminDashboard = () => {
       demandesEnrichies = demandesRaw.map(dem => ({ ...dem, user: usersMap[dem.user_id] || null }));
     }
 
-    // Construire map prof_id → noms de classes
+    // Map prof_id → labels "Classe — Cycle"
     const pcMap = {};
     (pc || []).forEach(row => {
       if (!pcMap[row.prof_id]) pcMap[row.prof_id] = [];
-      if (row.classe) pcMap[row.prof_id].push(row.classe.nom);
+      if (row.classe) {
+        const cycleNom = row.classe.cycle?.nom;
+        const label = cycleNom ? `${row.classe.nom} — ${cycleNom}` : row.classe.nom;
+        pcMap[row.prof_id].push(label);
+      }
     });
 
     setEtudiants(e || []); setProfs(p || []); setDemandes(demandesEnrichies);
@@ -205,16 +196,13 @@ const SuperAdminDashboard = () => {
   useEffect(() => { setSelectedEtudiants([]); setSelectedProfs([]); }, [tab]);
   useEffect(() => { setFilterClasse(""); }, [filterCycle]);
 
-  // ── Toggle fin d'année ───────────────────────────────────────────────────────
   const handleToggleFinAnnee = async () => {
-    setTogglingAnnee(true);
-    setFinAnneeModal(false);
+    setTogglingAnnee(true); setFinAnneeModal(false);
     const { error } = await setFinAnneeActive(!finAnnee);
     if (!error) setFinAnnee(v => !v);
     setTogglingAnnee(false);
   };
 
-  // ── Filtrage ────────────────────────────────────────────────────────────────
   const classesDuCycle = filterCycle ? classes.filter(c => c.cycle_id === filterCycle) : classes;
   const filteredEtudiants = etudiants.filter(e => {
     if (filterStatut && e.statut !== filterStatut) return false;
@@ -223,18 +211,15 @@ const SuperAdminDashboard = () => {
     return true;
   });
 
-  // ── Checkboxes ──────────────────────────────────────────────────────────────
   const toggleSelect = (id, list, setList) => setList(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
   const toggleAll = (data, list, setList) => setList(list.length === data.length ? [] : data.map(x => x.id));
 
-  // ── Bulk actions ─────────────────────────────────────────────────────────────
   const openModal = (action, ids, dataList, type) =>
     setModal({ open: true, action, targets: dataList.filter(x => ids.includes(x.id)), type });
 
   const handleConfirm = async () => {
-    setSaving(true);
-    setModal(m => ({ ...m, open: false }));
-    const ids    = modal.targets.map(t => t.id);
+    setSaving(true); setModal(m => ({ ...m, open: false }));
+    const ids = modal.targets.map(t => t.id);
     const statut = modal.action === "suspend" ? "rejete" : modal.action;
     await supabase.from("profiles").update({ statut }).in("id", ids);
     if (modal.type === "etudiant") { setEtudiants(prev => prev.map(e => ids.includes(e.id) ? { ...e, statut } : e)); setSelectedEtudiants([]); }
@@ -242,21 +227,18 @@ const SuperAdminDashboard = () => {
     setSaving(false);
   };
 
-  // ── Suppression définitive ───────────────────────────────────────────────────
   const openDeleteModal = (target, type) => setDeleteModal({ open: true, target, type });
 
   const handleDelete = async () => {
     const { target, type } = deleteModal;
     setDeleteModal({ open: false, target: null, type: "" });
     setSaving(true);
-    // Supprime le profil — les tables liées (progression, historique, demandes) doivent avoir ON DELETE CASCADE
     await supabase.from("profiles").delete().eq("id", target.id);
     if (type === "etudiant") setEtudiants(prev => prev.filter(e => e.id !== target.id));
     else setProfs(prev => prev.filter(p => p.id !== target.id));
     setSaving(false);
   };
 
-  // ── Passation ─────────────────────────────────────────────────────────────────
   const validerPassage = async (d) => {
     setSaving(true);
     await supabase.from("historique_classes").insert({ user_id: d.user_id, classe_id: d.classe_actuelle_id, type: d.type || "cycle", validee_le: new Date().toISOString() });
@@ -264,9 +246,9 @@ const SuperAdminDashboard = () => {
     if (d.type === "modulaire" && d.classe_voulue_id) {
       nouvelleClasseId = d.classe_voulue_id;
     } else {
-      const classeAct = d.classe_actuelle;
-      if (classeAct?.cycle_id) {
-        const { data: next } = await supabase.from("classes").select("id").eq("cycle_id", classeAct.cycle_id).eq("ordre", classeAct.ordre + 1).maybeSingle();
+      const ca = d.classe_actuelle;
+      if (ca?.cycle_id) {
+        const { data: next } = await supabase.from("classes").select("id").eq("cycle_id", ca.cycle_id).eq("ordre", ca.ordre + 1).maybeSingle();
         nouvelleClasseId = next?.id || null;
       }
     }
@@ -283,14 +265,12 @@ const SuperAdminDashboard = () => {
     setSaving(false);
   };
 
-  // ── Assignation manuelle ─────────────────────────────────────────────────────
   const handleAssignManuel = async () => {
     if (!assignEtudiant || !assignClasseId) return;
     setSaving(true);
     await supabase.from("profiles").update({ classe_id: assignClasseId }).eq("id", assignEtudiant.id);
     setEtudiants(prev => prev.map(e => e.id === assignEtudiant.id ? { ...e, classe_id: assignClasseId } : e));
-    setAssignModal(false); setAssignEtudiant(null); setAssignClasseId("");
-    setSaving(false);
+    setAssignModal(false); setAssignEtudiant(null); setAssignClasseId(""); setSaving(false);
   };
 
   const STAT_CARDS = [
@@ -300,7 +280,6 @@ const SuperAdminDashboard = () => {
     { label: "En attente", value: stats.pending,    icon: Clock,         color: "bg-amber-50 text-amber-700" },
   ];
 
-  // ── Card étudiant mobile ─────────────────────────────────────────────────────
   const EtudiantCard = ({ e }) => (
     <div className={`bg-white rounded-xl shadow p-4 border-l-4 ${selectedEtudiants.includes(e.id) ? "border-[#1A237E] bg-blue-50" : "border-transparent"}`}>
       <div className="flex gap-3">
@@ -332,50 +311,88 @@ const SuperAdminDashboard = () => {
     <>
       <Helmet><title>Super Admin — École Tyrannus</title></Helmet>
 
-      <ConfirmModal open={modal.open} action={modal.action} targets={modal.targets}
-        onConfirm={handleConfirm} onCancel={() => setModal(m => ({ ...m, open: false }))} />
-
-      <DeleteModal open={deleteModal.open} target={deleteModal.target}
-        onConfirm={handleDelete} onCancel={() => setDeleteModal({ open: false, target: null, type: "" })} />
+      <ConfirmModal open={modal.open} action={modal.action} targets={modal.targets} onConfirm={handleConfirm} onCancel={() => setModal(m => ({ ...m, open: false }))} />
+      <DeleteModal open={deleteModal.open} target={deleteModal.target} onConfirm={handleDelete} onCancel={() => setDeleteModal({ open: false, target: null, type: "" })} />
 
       {/* Modal fin d'année */}
       <Modal open={finAnneeModal} title={finAnnee ? "Désactiver la fin d'année ?" : "Activer la fin d'année ?"} onCancel={() => setFinAnneeModal(false)}>
-        <p className="text-sm text-gray-600 mb-5">
-          {finAnnee ? "Les étudiants ne verront plus les boutons de passation." : "Les étudiants ayant terminé leurs cours verront les boutons de passation."}
-        </p>
+        <p className="text-sm text-gray-600 mb-5">{finAnnee ? "Les étudiants ne verront plus les boutons de passation." : "Les étudiants ayant terminé leurs cours verront les boutons de passation."}</p>
         <div className="flex gap-3">
           <button onClick={() => setFinAnneeModal(false)} className="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50">Annuler</button>
-          <button onClick={handleToggleFinAnnee} disabled={togglingAnnee}
-            className={`flex-1 px-4 py-2.5 rounded-lg text-sm font-medium text-white ${finAnnee ? "bg-gray-600 hover:bg-gray-700" : "bg-[#1A237E] hover:bg-[#1A237E]/90"}`}>
+          <button onClick={handleToggleFinAnnee} disabled={togglingAnnee} className={`flex-1 px-4 py-2.5 rounded-lg text-sm font-medium text-white ${finAnnee ? "bg-gray-600 hover:bg-gray-700" : "bg-[#1A237E] hover:bg-[#1A237E]/90"}`}>
             {togglingAnnee ? "..." : finAnnee ? "Désactiver" : "Activer"}
           </button>
         </div>
       </Modal>
 
-      {/* Modal assignation manuelle */}
+      {/* Modal assignation */}
       <Modal open={assignModal} title={`Assigner — ${assignEtudiant?.prenom} ${assignEtudiant?.nom}`} onCancel={() => { setAssignModal(false); setAssignEtudiant(null); setAssignClasseId(""); }}>
         <p className="text-sm text-gray-500 mb-4">Classe actuelle : {assignEtudiant?.classe?.nom || <span className="italic">Non assigné</span>}</p>
-        <select value={assignClasseId} onChange={e => setAssignClasseId(e.target.value)}
-          className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-[#1A237E] outline-none bg-white mb-5">
+        <select value={assignClasseId} onChange={e => setAssignClasseId(e.target.value)} className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-[#1A237E] outline-none bg-white mb-5">
           <option value="">— Choisir une classe —</option>
           {cycles.map(cy => (
             <optgroup key={cy.id} label={cy.nom}>
-              {classes.filter(cl => cl.cycle_id === cy.id).map(cl => (
-                <option key={cl.id} value={cl.id}>{cl.est_modulaire ? "[Module] " : ""}{cl.nom}</option>
-              ))}
+              {classes.filter(cl => cl.cycle_id === cy.id).map(cl => <option key={cl.id} value={cl.id}>{cl.est_modulaire ? "[Module] " : ""}{cl.nom}</option>)}
             </optgroup>
           ))}
         </select>
         <div className="flex gap-3">
           <button onClick={() => { setAssignModal(false); setAssignEtudiant(null); setAssignClasseId(""); }} className="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50">Annuler</button>
-          <button onClick={handleAssignManuel} disabled={!assignClasseId || saving} className="flex-1 px-4 py-2.5 bg-[#1A237E] text-white rounded-lg text-sm font-medium hover:bg-[#1A237E]/90 disabled:opacity-50">
-            {saving ? "..." : "Confirmer"}
-          </button>
+          <button onClick={handleAssignManuel} disabled={!assignClasseId || saving} className="flex-1 px-4 py-2.5 bg-[#1A237E] text-white rounded-lg text-sm font-medium hover:bg-[#1A237E]/90 disabled:opacity-50">{saving ? "..." : "Confirmer"}</button>
         </div>
       </Modal>
 
-      <div className="bg-[#F5F5F5] min-h-screen pb-20">
+      {/* Modal passation */}
+      {passationModal.open && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 px-4 pb-4 sm:pb-0">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${passationModal.action === "valider" ? "bg-green-100" : "bg-red-100"}`}>
+                {passationModal.action === "valider" ? <CheckCircle className="w-5 h-5 text-green-600" /> : <XCircle className="w-5 h-5 text-red-600" />}
+              </div>
+              <div>
+                <h2 className="font-bold text-gray-800">{passationModal.action === "valider" ? "Confirmer la validation" : "Confirmer le rejet"}</h2>
+                <p className="text-xs text-gray-500">{passationModal.demande?.user?.prenom} {passationModal.demande?.user?.nom}</p>
+              </div>
+            </div>
+            <div className="bg-gray-50 rounded-xl p-3 mb-4 text-sm text-gray-600">
+              <span className="text-amber-600 font-medium">{passationModal.demande?.classe_actuelle?.nom}</span>{" → "}
+              <span className="text-green-600 font-medium">{passationModal.demande?.type === "modulaire" ? (passationModal.demande?.classe_voulue?.nom || "Module") : "Classe suivante"}</span>
+            </div>
+            <p className="text-sm text-gray-600 mb-5">{passationModal.action === "valider" ? "Cette action va incrémenter la classe de l'étudiant." : "La demande sera rejetée."}</p>
+            <div className="flex gap-3">
+              <button onClick={() => setPassationModal({ open: false, action: null, demande: null })} className="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50">Annuler</button>
+              <button onClick={() => { const d = passationModal.demande; setPassationModal({ open: false, action: null, demande: null }); if (passationModal.action === "valider") validerPassage(d); else rejeterPassage(d.id); }}
+                className={`flex-1 px-4 py-2.5 rounded-lg text-sm font-medium text-white ${passationModal.action === "valider" ? "bg-green-600 hover:bg-green-700" : "bg-red-600 hover:bg-red-700"}`}>
+                {passationModal.action === "valider" ? "Confirmer" : "Rejeter"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
+      {/* Vue dashboard prof (overlay plein écran) */}
+      {viewAsProfModal.open && (
+        <div className="fixed inset-0 z-[80] overflow-y-auto bg-[#F5F5F5]">
+          <div className="sticky top-0 z-10 bg-[#1A237E] text-white px-4 py-3 flex items-center justify-between shadow-lg">
+            <div className="flex items-center gap-3">
+              <Eye className="w-4 h-4 text-purple-300 flex-shrink-0" />
+              <div>
+                <p className="text-xs text-white/60">Vue Admin — Dashboard de</p>
+                <p className="font-semibold text-sm">{viewAsProfModal.prof?.prenom} {viewAsProfModal.prof?.nom}</p>
+              </div>
+            </div>
+            <button onClick={() => setViewAsProfModal({ open: false, prof: null })}
+              className="flex items-center gap-2 text-sm text-white/80 hover:text-white bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg transition-colors">
+              <X className="w-4 h-4" /> Fermer
+            </button>
+          </div>
+          {/* ProfDashboard avec profId injecté */}
+          <ProfDashboard viewAsProfId={viewAsProfModal.prof?.id} />
+        </div>
+      )}
+
+      <div className="bg-[#F5F5F5] min-h-screen pb-20">
         {/* Header */}
         <div className="bg-[#1A237E] text-white py-6 px-4">
           <div className="max-w-6xl mx-auto flex items-center justify-between gap-4 flex-wrap">
@@ -396,7 +413,6 @@ const SuperAdminDashboard = () => {
         </div>
 
         <div className="max-w-6xl mx-auto px-4 mt-6 space-y-6">
-
           {/* Stats */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {STAT_CARDS.map(s => (
@@ -413,9 +429,7 @@ const SuperAdminDashboard = () => {
               <button key={k} onClick={() => setTab(k)}
                 className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 whitespace-nowrap transition-colors ${tab === k ? "border-[#1A237E] text-[#1A237E]" : "border-transparent text-gray-500"}`}>
                 <I className="w-4 h-4" /> {l}
-                {k === "demandes" && demandes.length > 0 && (
-                  <span className="bg-amber-500 text-white text-xs rounded-full px-1.5 py-0.5 min-w-[18px] text-center">{demandes.length}</span>
-                )}
+                {k === "demandes" && demandes.length > 0 && <span className="bg-amber-500 text-white text-xs rounded-full px-1.5 py-0.5 min-w-[18px] text-center">{demandes.length}</span>}
               </button>
             ))}
           </div>
@@ -423,7 +437,6 @@ const SuperAdminDashboard = () => {
           {/* ── ÉTUDIANTS ── */}
           {tab === "etudiants" && (
             <div className="space-y-4">
-              {/* Filtres */}
               <div className="bg-white rounded-xl shadow p-4 space-y-4">
                 <div className="flex items-center gap-2 text-xs font-semibold text-gray-500 uppercase tracking-wide"><Filter className="w-3.5 h-3.5" /> Filtres</div>
                 <div className="flex gap-2 flex-wrap">
@@ -436,16 +449,14 @@ const SuperAdminDashboard = () => {
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="relative">
-                    <select value={filterCycle} onChange={e => setFilterCycle(e.target.value)}
-                      className="w-full appearance-none border border-gray-300 rounded-lg px-3 py-2.5 text-sm pr-8 focus:ring-2 focus:ring-[#1A237E] outline-none bg-white">
+                    <select value={filterCycle} onChange={e => setFilterCycle(e.target.value)} className="w-full appearance-none border border-gray-300 rounded-lg px-3 py-2.5 text-sm pr-8 focus:ring-2 focus:ring-[#1A237E] outline-none bg-white">
                       <option value="">Tous les cycles</option>
                       {cycles.map(c => <option key={c.id} value={c.id}>{c.nom}</option>)}
                     </select>
                     <ChevronDown className="absolute right-3 top-3 w-4 h-4 text-gray-400 pointer-events-none" />
                   </div>
                   <div className="relative">
-                    <select value={filterClasse} onChange={e => setFilterClasse(e.target.value)} disabled={!filterCycle}
-                      className="w-full appearance-none border border-gray-300 rounded-lg px-3 py-2.5 text-sm pr-8 focus:ring-2 focus:ring-[#1A237E] outline-none bg-white disabled:opacity-40">
+                    <select value={filterClasse} onChange={e => setFilterClasse(e.target.value)} disabled={!filterCycle} className="w-full appearance-none border border-gray-300 rounded-lg px-3 py-2.5 text-sm pr-8 focus:ring-2 focus:ring-[#1A237E] outline-none bg-white disabled:opacity-40">
                       <option value="">Toutes les classes</option>
                       {classesDuCycle.map(c => <option key={c.id} value={c.id}>{c.nom}</option>)}
                     </select>
@@ -460,11 +471,9 @@ const SuperAdminDashboard = () => {
                 )}
               </div>
 
-              <BulkBar selected={selectedEtudiants}
-                onAction={action => openModal(action, selectedEtudiants, filteredEtudiants, "etudiant")}
-                onClear={() => setSelectedEtudiants([])} />
+              <BulkBar selected={selectedEtudiants} onAction={action => openModal(action, selectedEtudiants, filteredEtudiants, "etudiant")} onClear={() => setSelectedEtudiants([])} />
 
-              {/* Tableau desktop */}
+              {/* Desktop */}
               <div className="hidden md:block bg-white rounded-xl shadow overflow-hidden">
                 <table className="w-full text-sm">
                   <thead className="bg-[#1A237E] text-white">
@@ -494,9 +503,7 @@ const SuperAdminDashboard = () => {
                               <button onClick={() => openModal("suspend", [e.id], [e], "etudiant")} className="flex items-center gap-1 text-xs bg-orange-100 text-orange-700 px-3 py-1.5 rounded-lg hover:bg-orange-200 font-medium"><ShieldOff className="w-3.5 h-3.5" /> Suspendre</button>
                               <button onClick={() => { setAssignEtudiant(e); setAssignModal(true); }} className="flex items-center gap-1 text-xs bg-blue-100 text-[#1A237E] px-3 py-1.5 rounded-lg hover:bg-blue-200 font-medium"><UserCog className="w-3.5 h-3.5" /> Assigner</button>
                             </>)}
-                            <button onClick={() => openDeleteModal(e, "etudiant")} className="flex items-center gap-1 text-xs bg-red-50 text-red-600 px-3 py-1.5 rounded-lg hover:bg-red-100 font-medium border border-red-200">
-                              <Trash2 className="w-3.5 h-3.5" /> Supprimer
-                            </button>
+                            <button onClick={() => openDeleteModal(e, "etudiant")} className="flex items-center gap-1 text-xs bg-red-50 text-red-600 px-3 py-1.5 rounded-lg hover:bg-red-100 font-medium border border-red-200"><Trash2 className="w-3.5 h-3.5" /> Supprimer</button>
                           </div>
                         </td>
                       </tr>
@@ -505,14 +512,9 @@ const SuperAdminDashboard = () => {
                 </table>
               </div>
 
-              {/* Cards mobile */}
+              {/* Mobile */}
               <div className="md:hidden space-y-3">
-                {filteredEtudiants.length > 0 && (
-                  <label className="flex items-center gap-2 text-sm text-gray-600 bg-white px-4 py-3 rounded-xl shadow cursor-pointer">
-                    <input type="checkbox" checked={selectedEtudiants.length === filteredEtudiants.length} onChange={() => toggleAll(filteredEtudiants, selectedEtudiants, setSelectedEtudiants)} className="rounded border-gray-300" />
-                    Tout sélectionner ({filteredEtudiants.length})
-                  </label>
-                )}
+                {filteredEtudiants.length > 0 && <label className="flex items-center gap-2 text-sm text-gray-600 bg-white px-4 py-3 rounded-xl shadow cursor-pointer"><input type="checkbox" checked={selectedEtudiants.length === filteredEtudiants.length} onChange={() => toggleAll(filteredEtudiants, selectedEtudiants, setSelectedEtudiants)} className="rounded border-gray-300" />Tout sélectionner ({filteredEtudiants.length})</label>}
                 {filteredEtudiants.length === 0 && <div className="text-center text-gray-400 py-10 bg-white rounded-xl shadow">Aucun résultat.</div>}
                 {filteredEtudiants.map(e => <EtudiantCard key={e.id} e={e} />)}
               </div>
@@ -524,7 +526,7 @@ const SuperAdminDashboard = () => {
             <div className="space-y-4">
               <BulkBar selected={selectedProfs} onAction={action => openModal(action, selectedProfs, profs, "prof")} onClear={() => setSelectedProfs([])} />
 
-              {/* Tableau desktop */}
+              {/* Desktop */}
               <div className="hidden md:block bg-white rounded-xl shadow overflow-hidden">
                 <table className="w-full text-sm">
                   <thead className="bg-[#1A237E] text-white">
@@ -541,15 +543,12 @@ const SuperAdminDashboard = () => {
                     {profs.map(p => (
                       <tr key={p.id} className={`hover:bg-gray-50 ${selectedProfs.includes(p.id) ? "bg-blue-50" : ""}`}>
                         <td className="p-4"><input type="checkbox" checked={selectedProfs.includes(p.id)} onChange={() => toggleSelect(p.id, selectedProfs, setSelectedProfs)} className="rounded border-gray-300" /></td>
-                        <td className="p-4">
-                          <p className="font-medium text-[#1A237E]">{p.prenom} {p.nom}</p>
-                          <p className="text-xs text-gray-400">{p.telephone}</p>
-                        </td>
+                        <td className="p-4"><p className="font-medium text-[#1A237E]">{p.prenom} {p.nom}</p><p className="text-xs text-gray-400">{p.telephone}</p></td>
                         <td className="p-4">
                           {profClasses[p.id]?.length > 0
                             ? <div className="flex flex-wrap gap-1">
-                                {profClasses[p.id].map((nom, i) => (
-                                  <span key={i} className="text-xs bg-blue-50 text-[#1A237E] px-2 py-0.5 rounded-full border border-blue-100">{nom} </span>
+                                {profClasses[p.id].map((label, i) => (
+                                  <span key={i} className="text-xs bg-blue-50 text-[#1A237E] px-2 py-0.5 rounded-full border border-blue-100 whitespace-nowrap">{label}</span>
                                 ))}
                               </div>
                             : <span className="text-xs text-gray-400 italic">Aucune</span>
@@ -562,12 +561,9 @@ const SuperAdminDashboard = () => {
                               <button onClick={() => openModal("valide", [p.id], [p], "prof")} className="text-xs bg-green-100 text-green-700 px-3 py-1.5 rounded-lg hover:bg-green-200 font-medium">Valider</button>
                               <button onClick={() => openModal("rejete", [p.id], [p], "prof")} className="text-xs bg-red-100 text-red-700 px-3 py-1.5 rounded-lg hover:bg-red-200 font-medium">Rejeter</button>
                             </>)}
-                            {p.statut === "valide" && (
-                              <button onClick={() => openModal("suspend", [p.id], [p], "prof")} className="flex items-center gap-1 text-xs bg-orange-100 text-orange-700 px-3 py-1.5 rounded-lg hover:bg-orange-200 font-medium"><ShieldOff className="w-3.5 h-3.5" /> Suspendre</button>
-                            )}
-                            <button onClick={() => openDeleteModal(p, "prof")} className="flex items-center gap-1 text-xs bg-red-50 text-red-600 px-3 py-1.5 rounded-lg hover:bg-red-100 font-medium border border-red-200">
-                              <Trash2 className="w-3.5 h-3.5" /> Supprimer
-                            </button>
+                            {p.statut === "valide" && <button onClick={() => openModal("suspend", [p.id], [p], "prof")} className="flex items-center gap-1 text-xs bg-orange-100 text-orange-700 px-3 py-1.5 rounded-lg hover:bg-orange-200 font-medium"><ShieldOff className="w-3.5 h-3.5" /> Suspendre</button>}
+                            <button onClick={() => setViewAsProfModal({ open: true, prof: p })} className="flex items-center gap-1 text-xs bg-purple-50 text-purple-700 px-3 py-1.5 rounded-lg hover:bg-purple-100 font-medium border border-purple-200"><Eye className="w-3.5 h-3.5" /> Dashboard</button>
+                            <button onClick={() => openDeleteModal(p, "prof")} className="flex items-center gap-1 text-xs bg-red-50 text-red-600 px-3 py-1.5 rounded-lg hover:bg-red-100 font-medium border border-red-200"><Trash2 className="w-3.5 h-3.5" /> Supprimer</button>
                           </div>
                         </td>
                       </tr>
@@ -576,14 +572,9 @@ const SuperAdminDashboard = () => {
                 </table>
               </div>
 
-              {/* Cards mobile profs */}
+              {/* Mobile profs */}
               <div className="md:hidden space-y-3">
-                {profs.length > 0 && (
-                  <label className="flex items-center gap-2 text-sm text-gray-600 bg-white px-4 py-3 rounded-xl shadow cursor-pointer">
-                    <input type="checkbox" checked={selectedProfs.length === profs.length} onChange={() => toggleAll(profs, selectedProfs, setSelectedProfs)} className="rounded border-gray-300" />
-                    Tout sélectionner ({profs.length})
-                  </label>
-                )}
+                {profs.length > 0 && <label className="flex items-center gap-2 text-sm text-gray-600 bg-white px-4 py-3 rounded-xl shadow cursor-pointer"><input type="checkbox" checked={selectedProfs.length === profs.length} onChange={() => toggleAll(profs, selectedProfs, setSelectedProfs)} className="rounded border-gray-300" />Tout sélectionner ({profs.length})</label>}
                 {profs.length === 0 && <div className="text-center text-gray-400 py-10 bg-white rounded-xl shadow">Aucun professeur.</div>}
                 {profs.map(p => (
                   <div key={p.id} className={`bg-white rounded-xl shadow p-4 border-l-4 ${selectedProfs.includes(p.id) ? "border-[#1A237E] bg-blue-50" : "border-transparent"}`}>
@@ -595,12 +586,9 @@ const SuperAdminDashboard = () => {
                           <StatutBadge statut={p.statut} />
                         </div>
                         <p className="text-xs text-gray-400 mb-2">{p.telephone}</p>
-                        {/* Classes assignées mobile */}
                         {profClasses[p.id]?.length > 0 && (
                           <div className="flex flex-wrap gap-1 mb-3">
-                            {profClasses[p.id].map((nom, i) => (
-                              <span key={i} className="text-xs bg-blue-50 text-[#1A237E] px-2 py-0.5 rounded-full border border-blue-100">{nom}</span>
-                            ))}
+                            {profClasses[p.id].map((label, i) => <span key={i} className="text-xs bg-blue-50 text-[#1A237E] px-2 py-0.5 rounded-full border border-blue-100">{label}</span>)}
                           </div>
                         )}
                         <div className="flex gap-2 flex-wrap">
@@ -608,12 +596,9 @@ const SuperAdminDashboard = () => {
                             <button onClick={() => openModal("valide", [p.id], [p], "prof")} className="text-xs bg-green-100 text-green-700 px-3 py-1.5 rounded-lg font-medium">Valider</button>
                             <button onClick={() => openModal("rejete", [p.id], [p], "prof")} className="text-xs bg-red-100 text-red-700 px-3 py-1.5 rounded-lg font-medium">Rejeter</button>
                           </>)}
-                          {p.statut === "valide" && (
-                            <button onClick={() => openModal("suspend", [p.id], [p], "prof")} className="flex items-center gap-1 text-xs bg-orange-100 text-orange-700 px-3 py-1.5 rounded-lg font-medium"><ShieldOff className="w-3 h-3" /> Suspendre</button>
-                          )}
-                          <button onClick={() => openDeleteModal(p, "prof")} className="flex items-center gap-1 text-xs bg-red-50 text-red-600 px-3 py-1.5 rounded-lg font-medium border border-red-200">
-                            <Trash2 className="w-3 h-3" /> Supprimer
-                          </button>
+                          {p.statut === "valide" && <button onClick={() => openModal("suspend", [p.id], [p], "prof")} className="flex items-center gap-1 text-xs bg-orange-100 text-orange-700 px-3 py-1.5 rounded-lg font-medium"><ShieldOff className="w-3 h-3" /> Suspendre</button>}
+                          <button onClick={() => setViewAsProfModal({ open: true, prof: p })} className="flex items-center gap-1 text-xs bg-purple-50 text-purple-700 px-3 py-1.5 rounded-lg font-medium border border-purple-200"><Eye className="w-3 h-3" /> Dashboard</button>
+                          <button onClick={() => openDeleteModal(p, "prof")} className="flex items-center gap-1 text-xs bg-red-50 text-red-600 px-3 py-1.5 rounded-lg font-medium border border-red-200"><Trash2 className="w-3 h-3" /> Supprimer</button>
                         </div>
                       </div>
                     </div>
@@ -636,61 +621,19 @@ const SuperAdminDashboard = () => {
                         {d.type === "modulaire" ? <span className="flex items-center gap-1"><Layers className="w-3 h-3" /> Module</span> : <span className="flex items-center gap-1"><ArrowRight className="w-3 h-3" /> Cycle</span>}
                       </span>
                     </div>
-                    <p className="text-sm text-gray-500">
-                      <span className="text-amber-600">{d.classe_actuelle?.nom}</span>{" → "}
-                      <span className="text-green-600">{d.type === "modulaire" ? d.classe_voulue?.nom : "Classe suivante"}</span>
-                    </p>
+                    <p className="text-sm text-gray-500"><span className="text-amber-600">{d.classe_actuelle?.nom}</span>{" → "}<span className="text-green-600">{d.type === "modulaire" ? d.classe_voulue?.nom : "Classe suivante"}</span></p>
                     <p className="text-xs text-gray-400 mt-1">{new Date(d.created_at).toLocaleDateString("fr-FR")}</p>
                   </div>
                   <div className="flex gap-2 flex-shrink-0">
-                    <button o nClick={() => setPassationModal({ open: true, action: "valider", demande: d })} disabled={saving}
-                      className="flex items-center gap-1 text-xs bg-green-100 text-green-700 px-4 py-2 rounded-lg hover:bg-green-200 font-medium">
-                      <CheckCircle className="w-4 h-4" /> Valider
-                    </button>
-                    <button onClick={() => setPassationModal({ open: true, action: "rejeter", demande: d })} disabled={saving}
-                      className="flex items-center gap-1 text-xs bg-red-100 text-red-700 px-4 py-2 rounded-lg hover:bg-red-200 font-medium">
-                      <XCircle className="w-4 h-4" /> Rejeter
-                    </button>
+                    <button onClick={() => setPassationModal({ open: true, action: "valider", demande: d })} disabled={saving} className="flex items-center gap-1 text-xs bg-green-100 text-green-700 px-4 py-2 rounded-lg hover:bg-green-200 font-medium"><CheckCircle className="w-4 h-4" /> Valider</button>
+                    <button onClick={() => setPassationModal({ open: true, action: "rejeter", demande: d })} disabled={saving} className="flex items-center gap-1 text-xs bg-red-100 text-red-700 px-4 py-2 rounded-lg hover:bg-red-200 font-medium"><XCircle className="w-4 h-4" /> Rejeter</button>
                   </div>
                 </div>
               ))}
             </div>
           )}
-
         </div>
       </div>
-
-      {/* Modal passation */}
-      {passationModal.open && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 px-4 pb-4 sm:pb-0">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
-            <div className="flex items-center gap-3 mb-4">
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${passationModal.action === "valider" ? "bg-green-100" : "bg-red-100"}`}>
-                {passationModal.action === "valider" ? <CheckCircle className="w-5 h-5 text-green-600" /> : <XCircle className="w-5 h-5 text-red-600" />}
-              </div>
-              <div>
-                <h2 className="font-bold text-gray-800">{passationModal.action === "valider" ? "Confirmer la validation" : "Confirmer le rejet"}</h2>
-                <p className="text-xs text-gray-500">{passationModal.demande?.user?.prenom} {passationModal.demande?.user?.nom}</p>
-              </div>
-            </div>
-            <div className="bg-gray-50 rounded-xl p-3 mb-4 text-sm text-gray-600">
-              <span className="text-amber-600 font-medium">{passationModal.demande?.classe_actuelle?.nom}</span>
-              {" → "}
-              <span className="text-green-600 font-medium">{passationModal.demande?.type === "modulaire" ? (passationModal.demande?.classe_voulue?.nom || "Module à définir") : "Classe suivante (auto)"}</span>
-            </div>
-            <p className="text-sm text-gray-600 mb-5">
-              {passationModal.action === "valider" ? "Cette action va incrémenter la classe de l'étudiant. Elle ne peut pas être annulée." : "La demande sera rejetée."}
-            </p>
-            <div className="flex gap-3">
-              <button onClick={() => setPassationModal({ open: false, action: null, demande: null })} className="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50">Annuler</button>
-              <button onClick={() => { const d = passationModal.demande; setPassationModal({ open: false, action: null, demande: null }); if (passationModal.action === "valider") validerPassage(d); else rejeterPassage(d.id); }}
-                className={`flex-1 px-4 py-2.5 rounded-lg text-sm font-medium text-white ${passationModal.action === "valider" ? "bg-green-600 hover:bg-green-700" : "bg-red-600 hover:bg-red-700"}`}>
-                {passationModal.action === "valider" ? "Confirmer" : "Rejeter définitivement"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </>
   );
 };
