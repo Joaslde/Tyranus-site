@@ -233,7 +233,18 @@ const SuperAdminDashboard = () => {
     const { target, type } = deleteModal;
     setDeleteModal({ open: false, target: null, type: "" });
     setSaving(true);
-    await supabase.from("profiles").delete().eq("id", target.id);
+
+    // RPC SECURITY DEFINER : supprime profil + auth.users en cascade
+    const { error } = await supabase.rpc("delete_user_completely", {
+      target_user_id: target.id,
+    });
+
+    if (error) {
+      console.error("Erreur suppression RPC:", error.message);
+      // Fallback direct si RPC pas encore créée
+      await supabase.from("profiles").delete().eq("id", target.id);
+    }
+
     if (type === "etudiant") setEtudiants(prev => prev.filter(e => e.id !== target.id));
     else setProfs(prev => prev.filter(p => p.id !== target.id));
     setSaving(false);

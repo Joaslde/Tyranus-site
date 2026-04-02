@@ -1,142 +1,167 @@
 import React, { useEffect, useState } from "react";
 import { Helmet } from "react-helmet";
-import { useParams, Link, useNavigate } from "react-router-dom";
-import { ArrowLeft, CheckCircle, Clock } from "lucide-react";
+import { useParams, Link } from "react-router-dom";
+import {
+  ArrowLeft, CheckCircle, FileText, ExternalLink,
+  PlayCircle, Download,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabaseClient";
 import { completeCours } from "@/lib/progressionService";
 
-// Convert YouTube URL to embed URL
 const toEmbedUrl = (url) => {
-  if (!url) return "";
-  // Already an embed
+  if (!url) return null;
   if (url.includes("youtube.com/embed/")) return url;
-  // youtu.be shortlink
-  const shortMatch = url.match(/youtu\.be\/([^?&]+)/);
-  if (shortMatch) return `https://www.youtube.com/embed/${shortMatch[1]}`;
-  // youtube.com/watch?v=
-  const longMatch = url.match(/[?&]v=([^&]+)/);
-  if (longMatch) return `https://www.youtube.com/embed/${longMatch[1]}`;
-  return url;
+  const short = url.match(/youtu\.be\/([^?&]+)/);
+  if (short) return `https://www.youtube.com/embed/${short[1]}`;
+  const long = url.match(/[?&]v=([^&]+)/);
+  if (long) return `https://www.youtube.com/embed/${long[1]}`;
+  return null;
 };
 
 const CoursPlayer = () => {
   const { id: coursId } = useParams();
-  const { user, profile, refreshProfile } = useAuth();
-  const navigate = useNavigate();
+  const { user, refreshProfile } = useAuth();
 
-  const [cours, setCours] = useState(null);
-  const [completed, setCompleted] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [finishing, setFinishing] = useState(false);
-  const [classeTerminee, setClasseTerminee] = useState(false);
+  const [cours, setCours]           = useState(null);
+  const [completed, setCompleted]   = useState(false);
+  const [loading, setLoading]       = useState(true);
+  const [finishing, setFinishing]   = useState(false);
+  const [activeTab, setActiveTab]   = useState("video");
 
   useEffect(() => {
     if (!coursId || !user) return;
-    supabase
-      .from("cours")
+
+    supabase.from("cours")
       .select("*, classe:classe_id(id, nom, ordre, cycle_id)")
-      .eq("id", coursId)
-      .single()
+      .eq("id", coursId).single()
       .then(({ data }) => {
         setCours(data);
+        // Onglet par défaut selon ce qui est disponible
+        if (data && !data.url_youtube && data.fichier_pdf_url) {
+          setActiveTab("pdf");
+        } else {
+          setActiveTab("video");
+        }
         setLoading(false);
       });
 
-    // Check if already completed (.maybeSingle évite le crash si 0 lignes)
-    supabase
-      .from("progression")
-      .select("completed")
-      .eq("user_id", user.id)
-      .eq("cours_id", coursId)
+    supabase.from("progression").select("completed")
+      .eq("user_id", user.id).eq("cours_id", coursId)
       .maybeSingle()
       .then(({ data }) => setCompleted(data?.completed || false));
   }, [coursId, user]);
 
   const handleMarkComplete = async () => {
     setFinishing(true);
-    const { classeTerminee: done } = await completeCours(
-      user.id,
-      coursId,
-      cours.classe.id,
-    );
+    await completeCours(user.id, coursId, cours.classe.id);
     setCompleted(true);
-    if (done) {
-      setClasseTerminee(true);
-      refreshProfile(); // update context: classe_id → null
-    }
+    refreshProfile();
     setFinishing(false);
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center text-gray-500">
-        Chargement...
-      </div>
-    );
-  }
+  if (loading) return (
+    <div className="min-h-screen flex items-center justify-center text-gray-500">Chargement...</div>
+  );
+  if (!cours) return (
+    <div className="min-h-screen flex items-center justify-center text-gray-500">Cours introuvable.</div>
+  );
 
-  if (!cours) {
-    return (
-      <div className="min-h-screen flex items-center justify-center text-gray-500">
-        Cours introuvable.
-      </div>
-    );
-  }
+  const embedUrl = toEmbedUrl(cours.url_youtube);
+  const hasVideo = !!embedUrl;
+  const hasPdf   = !!cours.fichier_pdf_url;
+  const hasBoth  = hasVideo && hasPdf;
 
   return (
     <>
-      <Helmet>
-        <title>{cours.titre} — École Tyrannus</title>
-      </Helmet>
+      <Helmet><title>{cours.titre} — École Tyrannus</title></Helmet>
       <div className="bg-[#F5F5F5] min-h-screen pb-20">
+
         {/* Top bar */}
         <div className="bg-[#1A237E] text-white py-4 px-4">
           <div className="max-w-4xl mx-auto flex items-center gap-3">
-            <Link
-              to="/etudiant/dashboard"
-              className="text-white/70 hover:text-white"
-            >
+            <Link to="/etudiant/dashboard" className="text-white/70 hover:text-white flex-shrink-0">
               <ArrowLeft className="w-5 h-5" />
             </Link>
-            <div>
-              <p className="text-xs text-white/60">{cours.classe?.nom}</p>
-              <h1 className="font-bold">{cours.titre}</h1>
+            <div className="min-w-0">
+              <p className="text-xs text-white/60 truncate">{cours.classe?.nom}</p>
+              <h1 className="font-bold truncate">{cours.titre}</h1>
             </div>
           </div>
         </div>
 
-        <div className="max-w-4xl mx-auto px-4 mt-6 space-y-6">
-          {/* YouTube iframe */}
-          <div className="bg-black rounded-xl overflow-hidden shadow-2xl aspect-video">
-            <iframe
-              src={`${toEmbedUrl(cours.url_youtube)}?rel=0`}
-              title={cours.titre}
-              className="w-full h-full"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-            />
-          </div>
+        <div className="max-w-4xl mx-auto px-4 mt-6 space-y-4">
 
-          {/* Fallback si YouTube bloque l'embed */}
-          <div className="flex items-center justify-between bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
-            <p className="text-sm text-amber-700">🎬 La vidéo ne s'affiche pas ?</p>
-            <a
-              href={cours.url_youtube}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-sm font-semibold text-[#1A237E] hover:underline"
-            >
-              Regarder sur YouTube →
-            </a>
-          </div>
+          {/* Tabs — seulement si les deux existent */}
+          {hasBoth && (
+            <div className="flex gap-2 bg-white rounded-xl shadow p-2">
+              <button onClick={() => setActiveTab("video")}
+                className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium transition-colors ${activeTab === "video" ? "bg-[#1A237E] text-white" : "text-gray-500 hover:bg-gray-100"}`}>
+                <PlayCircle className="w-4 h-4" /> Vidéo
+              </button>
+              <button onClick={() => setActiveTab("pdf")}
+                className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium transition-colors ${activeTab === "pdf" ? "bg-[#1A237E] text-white" : "text-gray-500 hover:bg-gray-100"}`}>
+                <FileText className="w-4 h-4" /> Document PDF
+              </button>
+            </div>
+          )}
 
-          {/* Description + Mark as done */}
+          {/* ── Vidéo ── */}
+          {hasVideo && (!hasBoth || activeTab === "video") && (
+            <>
+              <div className="bg-black rounded-xl overflow-hidden shadow-2xl aspect-video">
+                <iframe
+                  src={`${embedUrl}?rel=0`}
+                  title={cours.titre}
+                  className="w-full h-full"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                />
+              </div>
+              <div className="flex items-center justify-between bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
+                <p className="text-sm text-amber-700 flex items-center gap-2">
+                  <PlayCircle className="w-4 h-4" /> La vidéo ne s'affiche pas ?
+                </p>
+                <a href={cours.url_youtube} target="_blank" rel="noopener noreferrer"
+                  className="text-sm font-semibold text-[#1A237E] hover:underline flex items-center gap-1">
+                  <ExternalLink className="w-3.5 h-3.5" /> Ouvrir YouTube
+                </a>
+              </div>
+            </>
+          )}
+
+          {/* ── PDF ── */}
+          {hasPdf && (!hasBoth || activeTab === "pdf") && (
+            <div className="bg-white rounded-xl shadow overflow-hidden">
+              <iframe
+                src={cours.fichier_pdf_url}
+                title={`${cours.titre} — PDF`}
+                className="w-full"
+                style={{ height: "75vh", border: "none" }}
+              />
+              <div className="flex items-center justify-between px-5 py-3 border-t border-gray-100">
+                <p className="text-sm text-gray-500 flex items-center gap-2">
+                  <FileText className="w-4 h-4 text-[#1A237E]" /> Document PDF
+                </p>
+                <a href={cours.fichier_pdf_url} target="_blank" rel="noopener noreferrer" download
+                  className="flex items-center gap-1.5 text-sm font-semibold text-[#1A237E] hover:underline">
+                  <Download className="w-4 h-4" /> Télécharger
+                </a>
+              </div>
+            </div>
+          )}
+
+          {/* Ni vidéo ni PDF */}
+          {!hasVideo && !hasPdf && (
+            <div className="bg-white rounded-xl shadow p-8 text-center text-gray-400">
+              Aucun contenu disponible pour ce cours.
+            </div>
+          )}
+
+          {/* ── Description + Marquer terminé ── */}
           <div className="bg-white rounded-xl shadow p-6">
-            <h2 className="text-xl font-serif font-bold text-[#1A237E] mb-2">
-              {cours.titre}
-            </h2>
+            <h2 className="text-xl font-serif font-bold text-[#1A237E] mb-2">{cours.titre}</h2>
             {cours.description && (
               <p className="text-gray-600 text-sm mb-5">{cours.description}</p>
             )}
@@ -146,42 +171,21 @@ const CoursPlayer = () => {
                 <CheckCircle className="w-5 h-5" /> Cours terminé
               </div>
             ) : (
-              <Button
-                onClick={handleMarkComplete}
-                disabled={finishing}
-                className="bg-[#1A237E] text-white"
-              >
+              <Button onClick={handleMarkComplete} disabled={finishing} className="bg-[#1A237E] text-white">
                 {finishing ? (
                   <span className="flex items-center gap-2">
                     <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                     Enregistrement...
                   </span>
                 ) : (
-                  "✅ Marquer comme terminé"
+                  <span className="flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4" /> Marquer comme terminé
+                  </span>
                 )}
               </Button>
             )}
           </div>
 
-          {/* Classe terminée banner */}
-          {classeTerminee && (
-            <div className="bg-gradient-to-r from-[#1A237E] to-blue-700 text-white rounded-xl p-6 text-center shadow-xl">
-              <p className="text-4xl mb-2">🏆</p>
-              <h3 className="text-xl font-serif font-bold mb-2">
-                Classe terminée !
-              </h3>
-              <p className="text-white/80 text-sm mb-4">
-                Félicitations ! Vous avez terminé tous les cours de cette
-                classe. Retournez sur votre tableau de bord pour demander le
-                passage à la classe suivante.
-              </p>
-              <Link to="/etudiant/dashboard">
-                <Button className="bg-[#D4AF37] text-[#1A237E] font-bold hover:bg-[#D4AF37]/90">
-                  Aller au tableau de bord →
-                </Button>
-              </Link>
-            </div>
-          )}
         </div>
       </div>
     </>

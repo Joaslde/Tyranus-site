@@ -3,7 +3,7 @@ import { Helmet } from "react-helmet";
 import {
   Plus, BookOpen, Users, LogOut, Eye, EyeOff, Layers,
   GraduationCap, X, AlertTriangle, ExternalLink, Globe,
-  GlobeLock, Trash2,
+  GlobeLock, Trash2, CheckCircle, Upload, FileText,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
@@ -41,11 +41,25 @@ const ConfirmModal = ({ open, title, message, danger, onConfirm, onCancel }) => 
 };
 
 const PreviewModal = ({ cours, onClose, onPublishClick, toggling }) => {
+  const [previewTab, setPreviewTab] = React.useState("video");
+
+  React.useEffect(() => {
+    if (cours) setPreviewTab(cours.url_youtube ? "video" : "pdf");
+  }, [cours?.id]);
+
   if (!cours) return null;
+
+  const embedUrl = toEmbedUrl(cours.url_youtube);
+  const hasVideo = !!embedUrl;
+  const hasPdf   = !!cours.fichier_pdf_url;
+  const hasBoth  = hasVideo && hasPdf;
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden max-h-[90vh] flex flex-col">
+
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 flex-shrink-0">
           <div className="min-w-0">
             <h2 className="font-bold text-[#1A237E] truncate">{cours.titre}</h2>
             <p className="text-xs text-gray-400 mt-0.5">Aperçu professeur</p>
@@ -54,27 +68,70 @@ const PreviewModal = ({ cours, onClose, onPublishClick, toggling }) => {
             <X className="w-5 h-5" />
           </button>
         </div>
-        <div className="bg-black aspect-video">
-          <iframe src={`${toEmbedUrl(cours.url_youtube)}?rel=0`} title={cours.titre}
-            className="w-full h-full"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            allowFullScreen />
-        </div>
-        <div className="px-5 py-4 space-y-3">
-          <div className="flex items-center justify-between bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-            <p className="text-xs text-amber-700">Vidéo ne s'affiche pas ?</p>
-            <a href={cours.url_youtube} target="_blank" rel="noopener noreferrer"
-              className="text-xs font-semibold text-[#1A237E] hover:underline flex items-center gap-1">
-              <ExternalLink className="w-3.5 h-3.5" /> Ouvrir YouTube
-            </a>
+
+        {/* Tabs vidéo / PDF */}
+        {hasBoth && (
+          <div className="flex gap-2 px-4 pt-3 flex-shrink-0">
+            <button onClick={() => setPreviewTab("video")}
+              className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-medium transition-colors ${previewTab === "video" ? "bg-[#1A237E] text-white" : "text-gray-500 bg-gray-100 hover:bg-gray-200"}`}>
+              <Eye className="w-3.5 h-3.5" /> Vidéo
+            </button>
+            <button onClick={() => setPreviewTab("pdf")}
+              className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-medium transition-colors ${previewTab === "pdf" ? "bg-[#1A237E] text-white" : "text-gray-500 bg-gray-100 hover:bg-gray-200"}`}>
+              <FileText className="w-3.5 h-3.5" /> PDF
+            </button>
           </div>
-          {cours.description && <p className="text-sm text-gray-600">{cours.description}</p>}
-          <div className="flex gap-3 pt-1">
+        )}
+
+        {/* Contenu scrollable */}
+        <div className="overflow-y-auto flex-1">
+
+          {/* Vidéo */}
+          {hasVideo && (!hasBoth || previewTab === "video") && (
+            <>
+              <div className="bg-black aspect-video">
+                <iframe src={`${embedUrl}?rel=0`} title={cours.titre}
+                  className="w-full h-full"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen />
+              </div>
+              <div className="flex items-center justify-between bg-amber-50 border-b border-amber-100 px-4 py-2">
+                <p className="text-xs text-amber-700">Vidéo ne s'affiche pas ?</p>
+                <a href={cours.url_youtube} target="_blank" rel="noopener noreferrer"
+                  className="text-xs font-semibold text-[#1A237E] hover:underline flex items-center gap-1">
+                  <ExternalLink className="w-3 h-3" /> Ouvrir YouTube
+                </a>
+              </div>
+            </>
+          )}
+
+          {/* PDF */}
+          {hasPdf && (!hasBoth || previewTab === "pdf") && (
+            <div>
+              <iframe src={cours.fichier_pdf_url} title={`${cours.titre} — PDF`}
+                className="w-full" style={{ height: "50vh", border: "none" }} />
+              <div className="flex items-center justify-between px-4 py-2 border-t border-gray-100">
+                <p className="text-xs text-gray-500 flex items-center gap-1.5">
+                  <FileText className="w-3.5 h-3.5 text-[#1A237E]" /> Document PDF
+                </p>
+                <a href={cours.fichier_pdf_url} target="_blank" rel="noopener noreferrer" download
+                  className="text-xs font-semibold text-[#1A237E] hover:underline flex items-center gap-1">
+                  <ExternalLink className="w-3 h-3" /> Télécharger
+                </a>
+              </div>
+            </div>
+          )}
+
+          {!hasVideo && !hasPdf && (
+            <div className="p-8 text-center text-gray-400 text-sm">Aucun contenu disponible.</div>
+          )}
+
+          {/* Description + Publier */}
+          <div className="px-5 py-4 space-y-3">
+            {cours.description && <p className="text-sm text-gray-600">{cours.description}</p>}
             <button onClick={() => onPublishClick(cours)} disabled={toggling}
-              className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors ${
-                cours.publie
-                  ? "bg-amber-100 text-amber-700 hover:bg-amber-200"
-                  : "bg-[#1A237E] text-white hover:bg-[#1A237E]/90"
+              className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors ${
+                cours.publie ? "bg-amber-100 text-amber-700 hover:bg-amber-200" : "bg-[#1A237E] text-white hover:bg-[#1A237E]/90"
               }`}>
               {cours.publie
                 ? <><GlobeLock className="w-4 h-4" /> Dépublier</>
@@ -88,9 +145,30 @@ const PreviewModal = ({ cours, onClose, onPublishClick, toggling }) => {
   );
 };
 
+
+const SuccessModal = ({ open, onClose }) => {
+  if (!open) return null;
+  return (
+    <div style={{ position: "fixed", inset: 0, zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", backgroundColor: "rgba(0,0,0,0.5)", padding: "16px" }}>
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 text-center">
+        <div className="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+          <CheckCircle className="w-7 h-7 text-green-600" />
+        </div>
+        <h3 className="font-bold text-gray-800 text-lg mb-2">Cours ajouté !</h3>
+        <p className="text-sm text-gray-500 mb-6">
+          Votre cours a été enregistré. Il est en brouillon — publiez-le quand il est prêt.
+        </p>
+        <button onClick={onClose} className="w-full px-4 py-2.5 bg-[#1A237E] text-white rounded-xl text-sm font-medium hover:bg-[#1A237E]/90">
+          D'accord
+        </button>
+      </div>
+    </div>
+  );
+};
+
+
 const ProfDashboard = ({ viewAsProfId = null }) => {
   const { user, profile, signOut } = useAuth();
-  // viewAsProfId = admin qui visualise le dashboard d'un prof
   const effectiveUserId = viewAsProfId || user?.id;
   const [tab, setTab]               = useState("cours");
   const [mesClasses, setMesClasses] = useState([]);
@@ -99,7 +177,9 @@ const ProfDashboard = ({ viewAsProfId = null }) => {
   const [etudiants, setEtudiants]   = useState([]);
   const [form, setForm]             = useState({ titre: "", description: "", url_youtube: "", classe_id: "" });
   const [saving, setSaving]         = useState(false);
-  const [msg, setMsg]               = useState("");
+  const [successModal, setSuccessModal] = useState(false);
+  const [pdfFile, setPdfFile]           = useState(null);
+  const [uploadingPdf, setUploadingPdf] = useState(false);
   const [previewCours, setPreviewCours] = useState(null);
   const [toggling, setToggling]     = useState(false);
   const [confirmModal, setConfirmModal] = useState({ open: false, type: "", cours: null });
@@ -134,15 +214,50 @@ const ProfDashboard = ({ viewAsProfId = null }) => {
 
   const handleAddCours = async (e) => {
     e.preventDefault();
-    if (!form.classe_id) { setMsg("❌ Veuillez sélectionner une classe."); return; }
-    setSaving(true); setMsg("");
+    if (!form.classe_id) return;
+    // Au moins une source requise
+    if (!form.url_youtube && !pdfFile) {
+      alert("Veuillez ajouter une vidéo YouTube ou un fichier PDF.");
+      return;
+    }
+    setSaving(true);
+
+    let fichier_pdf_url = null;
+
+    // Upload PDF si présent
+    if (pdfFile) {
+      setUploadingPdf(true);
+      const ext = pdfFile.name.split(".").pop();
+      const path = `${form.classe_id}/${Date.now()}.${ext}`;
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from("cours-pdf")
+        .upload(path, pdfFile, { upsert: false });
+      setUploadingPdf(false);
+      if (uploadError) {
+        console.error("Upload PDF:", uploadError.message);
+        setSaving(false);
+        return;
+      }
+      const { data: urlData } = supabase.storage.from("cours-pdf").getPublicUrl(uploadData.path);
+      fichier_pdf_url = urlData.publicUrl;
+    }
+
     const { error } = await supabase.from("cours").insert({
       titre: form.titre, description: form.description,
-      url_youtube: form.url_youtube, classe_id: form.classe_id,
+      url_youtube: form.url_youtube || null,
+      fichier_pdf_url,
+      classe_id: form.classe_id,
       created_by: effectiveUserId, publie: false,
     });
-    if (error) { setMsg("❌ Erreur : " + error.message); }
-    else { setMsg("✅ Cours ajouté !"); setForm(f => ({ ...f, titre: "", description: "", url_youtube: "" })); refreshCours(); }
+
+    if (!error) {
+      setSuccessModal(true);
+      setForm(f => ({ ...f, titre: "", description: "", url_youtube: "" }));
+      setPdfFile(null);
+      refreshCours();
+    } else {
+      console.error("Erreur ajout cours:", error.message);
+    }
     setSaving(false);
   };
 
@@ -196,6 +311,7 @@ const ProfDashboard = ({ viewAsProfId = null }) => {
 
       <PreviewModal cours={previewCours} onClose={() => setPreviewCours(null)}
         onPublishClick={handlePublishClick} toggling={toggling} />
+      <SuccessModal open={successModal} onClose={() => setSuccessModal(false)} />
 
       <div className="bg-[#F5F5F5] min-h-screen pb-20">
         {!viewAsProfId && (
@@ -316,7 +432,6 @@ const ProfDashboard = ({ viewAsProfId = null }) => {
           {tab === "ajouter" && (
             <div className="bg-white rounded-xl shadow p-6 max-w-lg">
               <h2 className="text-lg font-bold text-[#1A237E] mb-5">Ajouter un cours vidéo</h2>
-              {msg && <p className={`text-sm mb-4 ${msg.startsWith("✅") ? "text-green-600" : "text-red-600"}`}>{msg}</p>}
               <form onSubmit={handleAddCours} className="space-y-4">
                 <div>
                   <label className="text-xs font-medium text-gray-700 mb-1 block">Titre du cours *</label>
@@ -330,14 +445,48 @@ const ProfDashboard = ({ viewAsProfId = null }) => {
                     rows={3} className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#1A237E] outline-none resize-none"
                     placeholder="Courte description du cours..." />
                 </div>
-                <div>
-                  <label className="text-xs font-medium text-gray-700 mb-1 block">Lien YouTube *</label>
-                  <input required value={form.url_youtube} onChange={e => setForm(f => ({ ...f, url_youtube: e.target.value }))}
-                    className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#1A237E] outline-none"
-                    placeholder="https://www.youtube.com/watch?v=..." />
+                {/* Source du cours — vidéo OU PDF (au moins un requis) */}
+                <div className="space-y-3 p-4 bg-gray-50 rounded-xl border border-gray-200">
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                    Contenu du cours — vidéo et/ou PDF (au moins un)
+                  </p>
+
+                  {/* YouTube */}
+                  <div>
+                    <label className="text-xs font-medium text-gray-700 mb-1 flex items-center gap-1.5 block">
+                      <Globe className="w-3.5 h-3.5 text-[#1A237E]" /> Lien YouTube
+                    </label>
+                    <input value={form.url_youtube} onChange={e => setForm(f => ({ ...f, url_youtube: e.target.value }))}
+                      className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#1A237E] outline-none bg-white"
+                      placeholder="https://www.youtube.com/watch?v=..." />
+                  </div>
+
+                  {/* PDF */}
+                  <div>
+                    <label className="text-xs font-medium text-gray-700 mb-1 flex items-center gap-1.5 block">
+                      <FileText className="w-3.5 h-3.5 text-[#1A237E]" /> Fichier PDF
+                    </label>
+                    <label className={`flex items-center gap-3 w-full px-3 py-2.5 border-2 border-dashed rounded-lg text-sm cursor-pointer transition-colors ${pdfFile ? "border-[#1A237E] bg-blue-50" : "border-gray-300 hover:border-[#1A237E] bg-white"}`}>
+                      <Upload className="w-4 h-4 text-[#1A237E] flex-shrink-0" />
+                      <span className={pdfFile ? "text-[#1A237E] font-medium truncate" : "text-gray-400 truncate"}>
+                        {pdfFile ? pdfFile.name : "Cliquer pour choisir un PDF..."}
+                      </span>
+                      <input type="file" accept=".pdf" className="hidden"
+                        onChange={e => setPdfFile(e.target.files[0] || null)} />
+                    </label>
+                    {pdfFile && (
+                      <button type="button" onClick={() => setPdfFile(null)} className="text-xs text-red-500 hover:underline mt-1">
+                        Retirer le fichier
+                      </button>
+                    )}
+                  </div>
                 </div>
-                <Button type="submit" disabled={saving} className="w-full bg-[#1A237E] text-white">
-                  {saving ? "Enregistrement..." : "Ajouter le cours"}
+                <Button type="submit" disabled={saving || uploadingPdf} className="w-full bg-[#1A237E] text-white">
+                  {uploadingPdf ? (
+                    <span className="flex items-center gap-2"><span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Upload PDF...</span>
+                  ) : saving ? (
+                    <span className="flex items-center gap-2"><span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Enregistrement...</span>
+                  ) : "Ajouter le cours"}
                 </Button>
               </form>
             </div>
