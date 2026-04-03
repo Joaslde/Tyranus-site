@@ -20,6 +20,26 @@ const toEmbedUrl = (url) => {
   return null;
 };
 
+// Téléchargement forcé via fetch + blob (contourne l'ouverture dans onglet)
+const forceDownload = async (url, nom) => {
+  try {
+    const response = await fetch(url);
+    const blob = await response.blob();
+    const blobUrl = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = blobUrl;
+    a.download = nom || "document.pdf";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.URL.revokeObjectURL(blobUrl);
+  } catch {
+    // Fallback : ouverture dans un onglet
+    window.open(url, "_blank");
+  }
+};
+
+
 const CoursPlayer = () => {
   const { id: coursId } = useParams();
   const { user, refreshProfile } = useAuth();
@@ -144,10 +164,11 @@ const CoursPlayer = () => {
                 <p className="text-sm text-gray-500 flex items-center gap-2">
                   <FileText className="w-4 h-4 text-[#1A237E]" /> Document PDF
                 </p>
-                <a href={cours.fichier_pdf_url} target="_blank" rel="noopener noreferrer" download
+                <button
+                  onClick={() => forceDownload(cours.fichier_pdf_url, cours.fichier_pdf_nom || "document.pdf")}
                   className="flex items-center gap-1.5 text-sm font-semibold text-[#1A237E] hover:underline">
                   <Download className="w-4 h-4" /> Télécharger
-                </a>
+                </button>
               </div>
             </div>
           )}

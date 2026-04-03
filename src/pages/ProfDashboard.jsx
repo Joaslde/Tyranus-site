@@ -223,6 +223,7 @@ const ProfDashboard = ({ viewAsProfId = null }) => {
     setSaving(true);
 
     let fichier_pdf_url = null;
+    let fichier_pdf_nom = null;
 
     // Upload PDF si présent
     if (pdfFile) {
@@ -240,12 +241,14 @@ const ProfDashboard = ({ viewAsProfId = null }) => {
       }
       const { data: urlData } = supabase.storage.from("cours-pdf").getPublicUrl(uploadData.path);
       fichier_pdf_url = urlData.publicUrl;
+      fichier_pdf_nom = pdfFile.name;
     }
 
     const { error } = await supabase.from("cours").insert({
       titre: form.titre, description: form.description,
       url_youtube: form.url_youtube || null,
       fichier_pdf_url,
+      fichier_pdf_nom,
       classe_id: form.classe_id,
       created_by: effectiveUserId, publie: false,
     });
@@ -291,6 +294,10 @@ const ProfDashboard = ({ viewAsProfId = null }) => {
     <>
       <Helmet><title>Dashboard Professeur — École Tyrannus</title></Helmet>
 
+      {/* Ordre DOM : PreviewModal en premier → ConfirmModal + SuccessModal en dernier (peint au-dessus) */}
+      <PreviewModal cours={previewCours} onClose={() => setPreviewCours(null)}
+        onPublishClick={handlePublishClick} toggling={toggling} />
+
       <ConfirmModal open={confirmModal.open}
         danger={confirmModal.type === "supprimer"}
         title={
@@ -308,9 +315,6 @@ const ProfDashboard = ({ viewAsProfId = null }) => {
         onConfirm={handleConfirm}
         onCancel={() => setConfirmModal({ open: false, type: "", cours: null })}
       />
-
-      <PreviewModal cours={previewCours} onClose={() => setPreviewCours(null)}
-        onPublishClick={handlePublishClick} toggling={toggling} />
       <SuccessModal open={successModal} onClose={() => setSuccessModal(false)} />
 
       <div className="bg-[#F5F5F5] min-h-screen pb-20">

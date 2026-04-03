@@ -98,7 +98,7 @@ const StudentDashboard = () => {
   useEffect(() => {
     if (!user || !profile?.classe_id) { setLoadingCours(false); return; }
     supabase.from("cours").select("*")
-      .eq("classe_id", profile.classe_id).eq("publie", true).order("ordre")
+      .eq("classe_id", profile.classe_id).eq("publie", true).order("created_at", { ascending: true })
       .then(async ({ data: coursData }) => {
         setCours(coursData || []);
         if (coursData && coursData.length > 0) {

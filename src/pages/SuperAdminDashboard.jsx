@@ -107,20 +107,60 @@ const StatutBadge = ({ statut }) => {
   return <span className={`text-xs px-2 py-1 rounded-full font-medium ${s[statut] || "bg-gray-100 text-gray-500"}`}>{l[statut] || statut}</span>;
 };
 
-const BulkBar = ({ selected, onAction, onClear }) => {
+const BulkBar = ({ selected, onAction, onDelete, onClear }) => {
   if (!selected.length) return null;
   return (
     <div className="flex items-center gap-3 bg-[#1A237E] text-white rounded-xl px-4 py-3 flex-wrap">
       <span className="text-sm font-medium">{selected.length} sélectionné(s)</span>
       <div className="flex gap-2 ml-auto flex-wrap">
-        {[["valide","Valider","bg-green-500 hover:bg-green-600",CheckCircle],["rejete","Rejeter","bg-red-500 hover:bg-red-600",XCircle],["suspend","Suspendre","bg-orange-500 hover:bg-orange-600",ShieldOff]].map(([a,l,c,I]) => (
+        {[["valide","Valider","bg-green-500 hover:bg-green-600",CheckCircle],["rejete","Rejeter","bg-red-500 hover:bg-red-600",XCircle]].map(([a,l,c,I]) => (
           <button key={a} onClick={() => onAction(a)} className={`flex items-center gap-1.5 text-xs ${c} px-3 py-1.5 rounded-lg font-medium`}><I className="w-3.5 h-3.5" /> {l}</button>
         ))}
+        <button onClick={onDelete}
+          className="flex items-center gap-1.5 text-xs bg-red-700 hover:bg-red-800 px-3 py-1.5 rounded-lg font-medium">
+          <Trash2 className="w-3.5 h-3.5" /> Supprimer
+        </button>
         <button onClick={onClear} className="text-xs text-white/70 hover:text-white px-2">Annuler</button>
       </div>
     </div>
   );
 };
+
+// ─── Modal confirmation bulk delete ──────────────────────────────────────────
+const BulkDeleteConfirm = ({ count, onConfirm, onCancel }) => {
+  const [countdown, setCountdown] = useState(5);
+  useEffect(() => {
+    setCountdown(5);
+    const t = setInterval(() => setCountdown(c => { if (c <= 1) { clearInterval(t); return 0; } return c - 1; }), 1000);
+    return () => clearInterval(t);
+  }, []);
+  return (
+    <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/60 px-4 pb-4 sm:pb-0">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
+            <Trash2 className="w-5 h-5 text-red-600" />
+          </div>
+          <div>
+            <h2 className="font-bold text-gray-800">Supprimer {count} profil(s) ?</h2>
+            <p className="text-xs text-red-500">Action irréversible — tous les comptes seront supprimés</p>
+          </div>
+        </div>
+        <p className="text-sm text-gray-600 mb-5">
+          Ces <strong>{count} personnes</strong> seront définitivement supprimées du système avec tout leur historique.
+        </p>
+        <div className="flex gap-3">
+          <button onClick={onCancel} className="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50">Annuler</button>
+          <button onClick={onConfirm} disabled={countdown > 0}
+            className={`flex-1 px-4 py-2.5 rounded-lg text-sm font-medium text-white transition-all ${countdown > 0 ? "bg-gray-300 cursor-not-allowed" : "bg-red-600 hover:bg-red-700"}`}>
+            {countdown > 0 ? `Supprimer dans ${countdown}s` : `Supprimer (${count})`}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 
 // ─── Dashboard ────────────────────────────────────────────────────────────────
 const SuperAdminDashboard = () => {
@@ -144,6 +184,7 @@ const SuperAdminDashboard = () => {
   const [modal, setModal]             = useState({ open: false, action: "", targets: [], type: "" });
   const [finAnneeModal, setFinAnneeModal]   = useState(false);
   const [deleteModal, setDeleteModal]       = useState({ open: false, target: null, type: "" });
+  const [bulkDeleteModal, setBulkDeleteModal] = useState({ open: false, ids: [], type: "" });
   const [passationModal, setPassationModal] = useState({ open: false, action: null, demande: null });
   const [assignModal, setAssignModal]       = useState(false);
   const [assignEtudiant, setAssignEtudiant] = useState(null);
@@ -228,6 +269,26 @@ const SuperAdminDashboard = () => {
   };
 
   const openDeleteModal = (target, type) => setDeleteModal({ open: true, target, type });
+
+  const openBulkDeleteModal = (ids, type) => setBulkDeleteModal({ open: true, ids, type });
+
+  const handleBulkDelete = async () => {
+    const { ids, type } = bulkDeleteModal;
+    setBulkDeleteModal({ open: false, ids: [], type: "" });
+    setSaving(true);
+    // Supprimer chaque profil via RPC
+    await Promise.all(ids.map(id =>
+      supabase.rpc("delete_user_completely", { target_user_id: id })
+    ));
+    if (type === "etudiant") {
+      setEtudiants(prev => prev.filter(e => !ids.includes(e.id)));
+      setSelectedEtudiants([]);
+    } else {
+      setProfs(prev => prev.filter(p => !ids.includes(p.id)));
+      setSelectedProfs([]);
+    }
+    setSaving(false);
+  };
 
   const handleDelete = async () => {
     const { target, type } = deleteModal;
@@ -324,6 +385,15 @@ const SuperAdminDashboard = () => {
 
       <ConfirmModal open={modal.open} action={modal.action} targets={modal.targets} onConfirm={handleConfirm} onCancel={() => setModal(m => ({ ...m, open: false }))} />
       <DeleteModal open={deleteModal.open} target={deleteModal.target} onConfirm={handleDelete} onCancel={() => setDeleteModal({ open: false, target: null, type: "" })} />
+
+      {/* Bulk delete modal */}
+      {bulkDeleteModal.open && (
+        <BulkDeleteConfirm
+          count={bulkDeleteModal.ids.length}
+          onConfirm={handleBulkDelete}
+          onCancel={() => setBulkDeleteModal({ open: false, ids: [], type: "" })}
+        />
+      )}
 
       {/* Modal fin d'année */}
       <Modal open={finAnneeModal} title={finAnnee ? "Désactiver la fin d'année ?" : "Activer la fin d'année ?"} onCancel={() => setFinAnneeModal(false)}>
@@ -482,7 +552,7 @@ const SuperAdminDashboard = () => {
                 )}
               </div>
 
-              <BulkBar selected={selectedEtudiants} onAction={action => openModal(action, selectedEtudiants, filteredEtudiants, "etudiant")} onClear={() => setSelectedEtudiants([])} />
+              <BulkBar selected={selectedEtudiants} onAction={action => openModal(action, selectedEtudiants, filteredEtudiants, "etudiant")} onDelete={() => openBulkDeleteModal(selectedEtudiants, "etudiant")} onClear={() => setSelectedEtudiants([])} />
 
               {/* Desktop */}
               <div className="hidden md:block bg-white rounded-xl shadow overflow-hidden">
@@ -535,7 +605,7 @@ const SuperAdminDashboard = () => {
           {/* ── PROFESSEURS ── */}
           {tab === "profs" && (
             <div className="space-y-4">
-              <BulkBar selected={selectedProfs} onAction={action => openModal(action, selectedProfs, profs, "prof")} onClear={() => setSelectedProfs([])} />
+              <BulkBar selected={selectedProfs} onAction={action => openModal(action, selectedProfs, profs, "prof")} onDelete={() => openBulkDeleteModal(selectedProfs, "prof")} onClear={() => setSelectedProfs([])} />
 
               {/* Desktop */}
               <div className="hidden md:block bg-white rounded-xl shadow overflow-hidden">
