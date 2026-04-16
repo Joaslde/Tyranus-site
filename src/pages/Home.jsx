@@ -18,7 +18,7 @@ const Home = () => {
       <ValuesSection />
       <FormationCycles />
       <AcademicYear />
-      <Testimonials />
+      {/* <Testimonials /> */}
       <EventsCalendar />
       <CTASection />
     </>
