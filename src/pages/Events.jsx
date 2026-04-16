@@ -4,6 +4,7 @@ import { Helmet } from 'react-helmet';
 import { CalendarDays, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
+
 const Events = () => {
   const articles = [
     {
