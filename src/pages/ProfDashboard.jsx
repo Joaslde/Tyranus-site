@@ -202,6 +202,7 @@ const ProfDashboard = ({ viewAsProfId = null }) => {
   useEffect(() => {
     if (!selectedClasse) return;
     supabase.from("cours").select("*").eq("classe_id", selectedClasse)
+      .eq("created_by", effectiveUserId)
       .order("created_at", { ascending: true })
       .then(({ data }) => setCours(data || []));
     supabase.from("profiles").select("id, nom, prenom, statut")
@@ -210,6 +211,7 @@ const ProfDashboard = ({ viewAsProfId = null }) => {
   }, [selectedClasse]);
 
   const refreshCours = () => supabase.from("cours").select("*").eq("classe_id", selectedClasse)
+    .eq("created_by", effectiveUserId)
     .order("created_at", { ascending: true }).then(({ data }) => setCours(data || []));
 
   const handleAddCours = async (e) => {
