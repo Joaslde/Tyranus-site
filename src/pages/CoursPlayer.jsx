@@ -59,7 +59,7 @@ const CoursPlayer = () => {
       .then(({ data }) => {
         setCours(data);
         // Onglet par défaut selon ce qui est disponible
-        if (data && !data.url_youtube && data.fichier_pdf_url) {
+        if (data && !data.url_youtube && Array.isArray(data.fichiers_pdf) && data.fichiers_pdf.length > 0) {
           setActiveTab("pdf");
         } else {
           setActiveTab("video");
@@ -90,8 +90,16 @@ const CoursPlayer = () => {
 
   const embedUrl = toEmbedUrl(cours.url_youtube);
   const hasVideo = !!embedUrl;
-  const hasPdf   = !!cours.fichier_pdf_url;
-  const hasBoth  = hasVideo && hasPdf;
+
+  // Rétro-compatibilité : fusion anciens cours (fichier_pdf_url) + nouveaux (fichiers_pdf)
+  const pdfs = [
+    ...(Array.isArray(cours.fichiers_pdf) ? cours.fichiers_pdf : []),
+    ...(cours.fichier_pdf_url
+      ? [{ url: cours.fichier_pdf_url, nom: cours.fichier_pdf_nom || "document.pdf" }]
+      : []),
+  ];
+  const hasPdf  = pdfs.length > 0;
+  const hasBoth = hasVideo && hasPdf;
 
   return (
     <>
@@ -151,24 +159,27 @@ const CoursPlayer = () => {
             </>
           )}
 
-          {/* ── PDF ── */}
+          {/* ── PDFs ── */}
           {hasPdf && (!hasBoth || activeTab === "pdf") && (
             <div className="bg-white rounded-xl shadow overflow-hidden">
-              <iframe
-                src={cours.fichier_pdf_url}
-                title={`${cours.titre} — PDF`}
-                className="w-full"
-                style={{ height: "75vh", border: "none" }}
-              />
-              <div className="flex items-center justify-between px-5 py-3 border-t border-gray-100">
-                <p className="text-sm text-gray-500 flex items-center gap-2">
-                  <FileText className="w-4 h-4 text-[#1A237E]" /> Document PDF
+              <div className="px-5 py-4 border-b border-gray-100">
+                <p className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                  <FileText className="w-4 h-4 text-[#1A237E]" />
+                  {pdfs.length} document{pdfs.length > 1 ? "s" : ""} PDF
                 </p>
-                <button
-                  onClick={() => forceDownload(cours.fichier_pdf_url, cours.fichier_pdf_nom || "document.pdf")}
-                  className="flex items-center gap-1.5 text-sm font-semibold text-[#1A237E] hover:underline">
-                  <Download className="w-4 h-4" /> Télécharger
-                </button>
+              </div>
+              <div className="p-4 space-y-2">
+                {pdfs.map((f, i) => (
+                  <div key={i} className="flex items-center gap-3 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3">
+                    <FileText className="w-4 h-4 text-[#1A237E] flex-shrink-0" />
+                    <span className="text-sm text-gray-700 flex-1 truncate">{f.nom}</span>
+                    <button
+                      onClick={() => forceDownload(f.url, f.nom || `document-${i+1}.pdf`)}
+                      className="flex items-center gap-1.5 text-sm font-semibold text-[#1A237E] hover:underline flex-shrink-0">
+                      <Download className="w-4 h-4" /> Télécharger
+                    </button>
+                  </div>
+                ))}
               </div>
             </div>
           )}

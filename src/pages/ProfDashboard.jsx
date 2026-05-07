@@ -51,8 +51,9 @@ const PreviewModal = ({ cours, onClose, onPublishClick, toggling }) => {
 
   const embedUrl = toEmbedUrl(cours.url_youtube);
   const hasVideo = !!embedUrl;
-  const hasPdf   = !!cours.fichier_pdf_url;
-  const hasBoth  = hasVideo && hasPdf;
+  const pdfs = Array.isArray(cours.fichiers_pdf) ? cours.fichiers_pdf : [];
+  const hasPdf = pdfs.length > 0;
+  const hasBoth = hasVideo && hasPdf;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4">
@@ -105,20 +106,19 @@ const PreviewModal = ({ cours, onClose, onPublishClick, toggling }) => {
             </>
           )}
 
-          {/* PDF */}
+          {/* PDFs — liste des documents */}
           {hasPdf && (!hasBoth || previewTab === "pdf") && (
-            <div>
-              <iframe src={cours.fichier_pdf_url} title={`${cours.titre} — PDF`}
-                className="w-full" style={{ height: "50vh", border: "none" }} />
-              <div className="flex items-center justify-between px-4 py-2 border-t border-gray-100">
-                <p className="text-xs text-gray-500 flex items-center gap-1.5">
-                  <FileText className="w-3.5 h-3.5 text-[#1A237E]" /> Document PDF
-                </p>
-                <a href={cours.fichier_pdf_url} target="_blank" rel="noopener noreferrer" download
-                  className="text-xs font-semibold text-[#1A237E] hover:underline flex items-center gap-1">
-                  <ExternalLink className="w-3 h-3" /> Télécharger
-                </a>
-              </div>
+            <div className="p-4 space-y-2">
+              {pdfs.map((f, i) => (
+                <div key={i} className="flex items-center gap-3 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2.5">
+                  <FileText className="w-4 h-4 text-[#1A237E] flex-shrink-0" />
+                  <span className="text-sm text-gray-700 flex-1 truncate">{f.nom}</span>
+                  <a href={f.url} target="_blank" rel="noopener noreferrer"
+                    className="text-xs font-semibold text-[#1A237E] hover:underline flex items-center gap-1 flex-shrink-0">
+                    <ExternalLink className="w-3 h-3" /> Ouvrir
+                  </a>
+                </div>
+              ))}
             </div>
           )}
 
@@ -177,9 +177,10 @@ const ProfDashboard = ({ viewAsProfId = null }) => {
   const [etudiants, setEtudiants]   = useState([]);
   const [form, setForm]             = useState({ titre: "", description: "", url_youtube: "", classe_id: "" });
   const [saving, setSaving]         = useState(false);
-  const [successModal, setSuccessModal] = useState(false);
-  const [pdfFile, setPdfFile]           = useState(null);
-  const [uploadingPdf, setUploadingPdf] = useState(false);
+  const [successModal, setSuccessModal]   = useState(false);
+  const [pdfFiles, setPdfFiles]           = useState([]);
+  const [uploadingPdf, setUploadingPdf]   = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [previewCours, setPreviewCours] = useState(null);
   const [toggling, setToggling]     = useState(false);
   const [confirmModal, setConfirmModal] = useState({ open: false, type: "", cours: null });
@@ -217,40 +218,35 @@ const ProfDashboard = ({ viewAsProfId = null }) => {
   const handleAddCours = async (e) => {
     e.preventDefault();
     if (!form.classe_id) return;
-    // Au moins une source requise
-    if (!form.url_youtube && !pdfFile) {
-      alert("Veuillez ajouter une vidéo YouTube ou un fichier PDF.");
+    if (!form.url_youtube && pdfFiles.length === 0) {
+      alert("Veuillez ajouter une vidéo YouTube ou au moins un fichier PDF.");
       return;
     }
     setSaving(true);
 
-    let fichier_pdf_url = null;
-    let fichier_pdf_nom = null;
-
-    // Upload PDF si présent
-    if (pdfFile) {
+    // Upload des PDFs (max 6) → tableau [{url, nom}]
+    let fichiers_pdf = [];
+    if (pdfFiles.length > 0) {
       setUploadingPdf(true);
-      const ext = pdfFile.name.split(".").pop();
-      const path = `${form.classe_id}/${Date.now()}.${ext}`;
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from("cours-pdf")
-        .upload(path, pdfFile, { upsert: false });
-      setUploadingPdf(false);
-      if (uploadError) {
-        console.error("Upload PDF:", uploadError.message);
-        setSaving(false);
-        return;
+      for (let i = 0; i < pdfFiles.length; i++) {
+        setUploadProgress(Math.round((i / pdfFiles.length) * 100));
+        const file = pdfFiles[i];
+        const ext = file.name.split(".").pop();
+        const path = `${form.classe_id}/${Date.now()}-${i}.${ext}`;
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from("cours-pdf").upload(path, file, { upsert: false });
+        if (uploadError) { console.error("Upload PDF:", uploadError.message); continue; }
+        const { data: urlData } = supabase.storage.from("cours-pdf").getPublicUrl(uploadData.path);
+        fichiers_pdf.push({ url: urlData.publicUrl, nom: file.name });
       }
-      const { data: urlData } = supabase.storage.from("cours-pdf").getPublicUrl(uploadData.path);
-      fichier_pdf_url = urlData.publicUrl;
-      fichier_pdf_nom = pdfFile.name;
+      setUploadProgress(100);
+      setUploadingPdf(false);
     }
 
     const { error } = await supabase.from("cours").insert({
       titre: form.titre, description: form.description,
       url_youtube: form.url_youtube || null,
-      fichier_pdf_url,
-      fichier_pdf_nom,
+      fichiers_pdf,
       classe_id: form.classe_id,
       created_by: effectiveUserId, publie: false,
     });
@@ -258,7 +254,8 @@ const ProfDashboard = ({ viewAsProfId = null }) => {
     if (!error) {
       setSuccessModal(true);
       setForm(f => ({ ...f, titre: "", description: "", url_youtube: "" }));
-      setPdfFile(null);
+      setPdfFiles([]);
+      setUploadProgress(0);
       refreshCours();
     } else {
       console.error("Erreur ajout cours:", error.message);
@@ -467,29 +464,60 @@ const ProfDashboard = ({ viewAsProfId = null }) => {
                       placeholder="https://www.youtube.com/watch?v=..." />
                   </div>
 
-                  {/* PDF */}
+                  {/* PDF multi-fichiers (max 6) */}
                   <div>
-                    <label className="text-xs font-medium text-gray-700 mb-1 flex items-center gap-1.5 block">
-                      <FileText className="w-3.5 h-3.5 text-[#1A237E]" /> Fichier PDF
+                    <label className="text-xs font-medium text-gray-700 mb-1 flex items-center justify-between block">
+                      <span className="flex items-center gap-1.5"><FileText className="w-3.5 h-3.5 text-[#1A237E]" /> Fichiers PDF</span>
+                      <span className="text-gray-400 font-normal">{pdfFiles.length}/6</span>
                     </label>
-                    <label className={`flex items-center gap-3 w-full px-3 py-2.5 border-2 border-dashed rounded-lg text-sm cursor-pointer transition-colors ${pdfFile ? "border-[#1A237E] bg-blue-50" : "border-gray-300 hover:border-[#1A237E] bg-white"}`}>
-                      <Upload className="w-4 h-4 text-[#1A237E] flex-shrink-0" />
-                      <span className={pdfFile ? "text-[#1A237E] font-medium truncate" : "text-gray-400 truncate"}>
-                        {pdfFile ? pdfFile.name : "Cliquer pour choisir un PDF..."}
-                      </span>
-                      <input type="file" accept=".pdf" className="hidden"
-                        onChange={e => setPdfFile(e.target.files[0] || null)} />
-                    </label>
-                    {pdfFile && (
-                      <button type="button" onClick={() => setPdfFile(null)} className="text-xs text-red-500 hover:underline mt-1">
-                        Retirer le fichier
-                      </button>
+
+                    {pdfFiles.length < 6 && (
+                      <label className="flex items-center gap-3 w-full px-3 py-2.5 border-2 border-dashed border-gray-300 hover:border-[#1A237E] rounded-lg text-sm cursor-pointer transition-colors bg-white">
+                        <Upload className="w-4 h-4 text-[#1A237E] flex-shrink-0" />
+                        <span className="text-gray-400 truncate">
+                          Ajouter des PDFs ({6 - pdfFiles.length} restant{6 - pdfFiles.length > 1 ? "s" : ""})
+                        </span>
+                        <input type="file" accept=".pdf" multiple className="hidden"
+                          onChange={(e) => {
+                            const selected = Array.from(e.target.files).filter(f => f.type === "application/pdf");
+                            const total = [...pdfFiles, ...selected];
+                            setPdfFiles(total.length > 6 ? total.slice(0, 6) : total);
+                            e.target.value = "";
+                          }} />
+                      </label>
+                    )}
+
+                    {pdfFiles.length > 0 && (
+                      <div className="mt-2 space-y-1.5">
+                        {pdfFiles.map((f, i) => (
+                          <div key={i} className="flex items-center gap-2 bg-blue-50 border border-blue-100 rounded-lg px-3 py-2">
+                            <FileText className="w-3.5 h-3.5 text-[#1A237E] flex-shrink-0" />
+                            <span className="text-xs text-gray-700 flex-1 truncate">{f.name}</span>
+                            <span className="text-xs text-gray-400 flex-shrink-0">{(f.size / 1024 / 1024).toFixed(1)} Mo</span>
+                            <button type="button" onClick={() => setPdfFiles(prev => prev.filter((_, idx) => idx !== i))}
+                              className="text-red-400 hover:text-red-600 flex-shrink-0">
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {uploadingPdf && (
+                      <div className="mt-2">
+                        <div className="flex justify-between text-xs text-gray-500 mb-1">
+                          <span>Upload en cours...</span><span>{uploadProgress}%</span>
+                        </div>
+                        <div className="bg-gray-200 rounded-full h-1.5">
+                          <div className="bg-[#1A237E] h-1.5 rounded-full transition-all duration-300" style={{ width: `${uploadProgress}%` }} />
+                        </div>
+                      </div>
                     )}
                   </div>
                 </div>
                 <Button type="submit" disabled={saving || uploadingPdf} className="w-full bg-[#1A237E] text-white">
                   {uploadingPdf ? (
-                    <span className="flex items-center gap-2"><span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Upload PDF...</span>
+                    <span className="flex items-center gap-2"><span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Upload {uploadProgress}%...</span>
                   ) : saving ? (
                     <span className="flex items-center gap-2"><span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Enregistrement...</span>
                   ) : "Ajouter le cours"}
