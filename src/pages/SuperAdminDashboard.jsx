@@ -189,6 +189,9 @@ const SuperAdminDashboard = () => {
   const [assignModal, setAssignModal]       = useState(false);
   const [assignEtudiant, setAssignEtudiant] = useState(null);
   const [assignClasseId, setAssignClasseId] = useState("");
+  const [assignProfModal, setAssignProfModal] = useState(false);
+  const [assignProf, setAssignProf]           = useState(null);
+  const [assignProfClasseId, setAssignProfClasseId] = useState("");
   const [viewAsProfModal, setViewAsProfModal] = useState({ open: false, prof: null });
 
   // ── Load ────────────────────────────────────────────────────────────────────
@@ -198,7 +201,7 @@ const SuperAdminDashboard = () => {
         supabase.from("profiles").select("id, nom, prenom, telephone, statut, created_at, classe_id, classe:classe_id(id, nom, cycle:cycle_id(id, nom))").eq("role", "etudiant").order("created_at", { ascending: false }),
         supabase.from("profiles").select("id, nom, prenom, telephone, statut, created_at").eq("role", "professeur").order("created_at", { ascending: false }),
         supabase.from("demandes_passage").select("id, statut, created_at, user_id, classe_actuelle_id, classe_voulue_id, type, classe_actuelle:classe_actuelle_id(id, nom, ordre, cycle_id), classe_voulue:classe_voulue_id(id, nom)").eq("statut", "en_attente").order("created_at", { ascending: false }),
-        supabase.from("cours").select("id", { count: "exact" }),
+        supabase.from("cours").select("id", { count: "exact" }).eq("publie", true),
         supabase.from("cycles").select("id, nom").order("ordre"),
         supabase.from("classes").select("id, nom, cycle_id, ordre, est_modulaire").order("ordre"),
         supabase.from("settings").select("valeur").eq("cle", "fin_annee_active").maybeSingle(),
@@ -345,10 +348,48 @@ const SuperAdminDashboard = () => {
     setAssignModal(false); setAssignEtudiant(null); setAssignClasseId(""); setSaving(false);
   };
 
+  const handleAssignProfClasse = async () => {
+    if (!assignProf || !assignProfClasseId) return;
+    setSaving(true);
+
+    // Vérifier si cette classe est déjà assignée à ce prof
+    const dejaAssignee = (profClasses[assignProf.id] || []).some(label =>
+      classes.find(c => c.id === assignProfClasseId && label.startsWith(c.nom))
+    );
+    if (dejaAssignee) {
+      alert("Ce professeur a déjà cette classe assignée.");
+      setSaving(false);
+      return;
+    }
+
+    const { error } = await supabase.from("prof_classes").insert({
+      prof_id: assignProf.id,
+      classe_id: assignProfClasseId,
+    });
+
+    if (!error) {
+      // Mettre à jour l'affichage local
+      const classe = classes.find(c => c.id === assignProfClasseId);
+      const cycle = cycles.find(cy => cy.id === classe?.cycle_id);
+      const label = cycle ? `${classe.nom} — ${cycle.nom}` : classe?.nom || "";
+      setProfClasses(prev => ({
+        ...prev,
+        [assignProf.id]: [...(prev[assignProf.id] || []), label],
+      }));
+    } else {
+      console.error("Erreur assignation:", error.message);
+    }
+
+    setAssignProfModal(false);
+    setAssignProf(null);
+    setAssignProfClasseId("");
+    setSaving(false);
+  };
+
   const STAT_CARDS = [
     { label: "Étudiants",  value: stats.etudiants, icon: GraduationCap, color: "bg-blue-50 text-[#1A237E]" },
     { label: "Professeurs",value: stats.profs,      icon: Users,         color: "bg-purple-50 text-purple-700" },
-    { label: "Cours",      value: stats.cours,      icon: BookOpen,      color: "bg-green-50 text-green-700" },
+    { label: "Cours publiés", value: stats.cours, icon: BookOpen, color: "bg-green-50 text-green-700" },
     { label: "En attente", value: stats.pending,    icon: Clock,         color: "bg-amber-50 text-amber-700" },
   ];
 
@@ -420,6 +461,40 @@ const SuperAdminDashboard = () => {
         <div className="flex gap-3">
           <button onClick={() => { setAssignModal(false); setAssignEtudiant(null); setAssignClasseId(""); }} className="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50">Annuler</button>
           <button onClick={handleAssignManuel} disabled={!assignClasseId || saving} className="flex-1 px-4 py-2.5 bg-[#1A237E] text-white rounded-lg text-sm font-medium hover:bg-[#1A237E]/90 disabled:opacity-50">{saving ? "..." : "Confirmer"}</button>
+        </div>
+      </Modal>
+
+      {/* Modal assignation classe → prof */}
+      <Modal open={assignProfModal} title={`Assigner une classe — ${assignProf?.prenom} ${assignProf?.nom}`}
+        onCancel={() => { setAssignProfModal(false); setAssignProf(null); setAssignProfClasseId(""); }}>
+        <p className="text-sm text-gray-500 mb-1">Classes actuelles :</p>
+        <div className="flex flex-wrap gap-1 mb-4 min-h-[24px]">
+          {(profClasses[assignProf?.id] || []).length > 0
+            ? (profClasses[assignProf?.id] || []).map((label, i) => (
+                <span key={i} className="text-xs bg-blue-50 text-[#1A237E] px-2 py-0.5 rounded-full border border-blue-100">{label}</span>
+              ))
+            : <span className="text-xs text-gray-400 italic">Aucune classe assignée</span>
+          }
+        </div>
+        <p className="text-sm font-medium text-gray-700 mb-2">Ajouter une nouvelle classe :</p>
+        <select value={assignProfClasseId} onChange={e => setAssignProfClasseId(e.target.value)}
+          className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-[#1A237E] outline-none bg-white mb-5">
+          <option value="">— Choisir une classe —</option>
+          {cycles.map(cy => (
+            <optgroup key={cy.id} label={cy.nom}>
+              {classes.filter(cl => cl.cycle_id === cy.id).map(cl => (
+                <option key={cl.id} value={cl.id}>{cl.est_modulaire ? "[Module] " : ""}{cl.nom}</option>
+              ))}
+            </optgroup>
+          ))}
+        </select>
+        <div className="flex gap-3">
+          <button onClick={() => { setAssignProfModal(false); setAssignProf(null); setAssignProfClasseId(""); }}
+            className="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50">Annuler</button>
+          <button onClick={handleAssignProfClasse} disabled={!assignProfClasseId || saving}
+            className="flex-1 px-4 py-2.5 bg-[#1A237E] text-white rounded-lg text-sm font-medium hover:bg-[#1A237E]/90 disabled:opacity-50">
+            {saving ? "..." : "Assigner"}
+          </button>
         </div>
       </Modal>
 
@@ -643,6 +718,7 @@ const SuperAdminDashboard = () => {
                               <button onClick={() => openModal("rejete", [p.id], [p], "prof")} className="text-xs bg-red-100 text-red-700 px-3 py-1.5 rounded-lg hover:bg-red-200 font-medium">Rejeter</button>
                             </>)}
                             {p.statut === "valide" && <button onClick={() => openModal("suspend", [p.id], [p], "prof")} className="flex items-center gap-1 text-xs bg-orange-100 text-orange-700 px-3 py-1.5 rounded-lg hover:bg-orange-200 font-medium"><ShieldOff className="w-3.5 h-3.5" /> Suspendre</button>}
+                            <button onClick={() => { setAssignProf(p); setAssignProfModal(true); }} className="flex items-center gap-1 text-xs bg-indigo-50 text-indigo-700 px-3 py-1.5 rounded-lg hover:bg-indigo-100 font-medium border border-indigo-200"><UserCog className="w-3.5 h-3.5" /> Assigner classe</button>
                             <button onClick={() => setViewAsProfModal({ open: true, prof: p })} className="flex items-center gap-1 text-xs bg-purple-50 text-purple-700 px-3 py-1.5 rounded-lg hover:bg-purple-100 font-medium border border-purple-200"><Eye className="w-3.5 h-3.5" /> Dashboard</button>
                             <button onClick={() => openDeleteModal(p, "prof")} className="flex items-center gap-1 text-xs bg-red-50 text-red-600 px-3 py-1.5 rounded-lg hover:bg-red-100 font-medium border border-red-200"><Trash2 className="w-3.5 h-3.5" /> Supprimer</button>
                           </div>
